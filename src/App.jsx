@@ -27,7 +27,13 @@ function App() {
       {answers === null ? (
         <DecisionTree questions={questions} onComplete={handleComplete} />
       ) : (
-        <Results outcomes={eligibleOutcomes} answers={answers} questions={questions} onRestart={handleRestart} />
+        <Results
+          outcomes={eligibleOutcomes}
+          allOutcomes={outcomes}
+          answers={answers}
+          questions={questions}
+          onRestart={handleRestart}
+        />
       )}
     </div>
   )

@@ -1,0 +1,22 @@
+{
+  "sourceWorkbook": "C:\\test\\assess-nas-to-azure-storage\\data-input\\workload_protocol_sku_mapping.xlsx",
+  "sheets": [
+    {
+      "sheet": "workload_protocol_sku_mapping",
+      "rows": 35,
+      "columns": [
+        "Workload type",
+        "Expected avg file size (used for Blob IO transaction calculations baseline)",
+        "Files per directory (avg) (used for Blob IO transaction calculations baseline)",
+        "Directory depth (used for Blob IO transaction calculations baseline)",
+        "File churn (used for Blob IO transaction calculations baseline)",
+        "Default Azure Files media tendency",
+        "Azure Blob access tier tendency",
+        "Source protocol",
+        "Prioritised Target SKU/Recommended"
+      ],
+      "json": "C:\\test\\assess-nas-to-azure-storage\\src\\data\\preferred_choice_workload_protocol_sku_mapping.json",
+      "csv": "C:\\test\\assess-nas-to-azure-storage\\src\\data\\preferred_choice_workload_protocol_sku_mapping.csv"
+    }
+  ]
+}

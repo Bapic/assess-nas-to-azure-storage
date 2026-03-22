@@ -5,7 +5,8 @@
  *   questions: array of question objects, each with:
  *     - id:          unique string identifier
  *     - text:        the question text shown to the user
- *     - type:        "buttons" (default) | "select" (dropdown)
+ *     - type:        "buttons" (default) | "select" (dropdown) | "input"
+ *     - defaultValue:(optional) default selected value for select-like inputs
  *     - placeholder: (select only) placeholder label shown as first disabled option
  *     - options:     flat array of { label, value }  — for button-style questions
  *                    OR grouped array of { group, items: [{ label, value }] } — for select dropdowns
@@ -22,7 +23,7 @@
 export const questions = [
   {
     id: "region",
-    text: "Select an Azure region",
+    text: "Select an Azure region [Applicable for AzFiles and AzBlob]",
     type: "select",
     placeholder: "— Select a region —",
     options: [
@@ -122,7 +123,7 @@ export const questions = [
   },
   {
     id: "redundancy",
-    text: "Select the redundancy type",
+    text: "Select the redundancy type [Applicable for AzFiles and AzBlob]",
     type: "select",
     placeholder: "\u2014 Select a redundancy type \u2014",
     options: [
@@ -133,8 +134,90 @@ export const questions = [
     ],
   },
   {
+    id: "sourceProtocol",
+    text: "Enter your Fileshare source protocol",
+    type: "multiselect",
+    defaultValues: ["smb_v3"],
+    options: [
+      { label: "SMB v2.x", value: "smb_v2" },
+      { label: "SMB v3.x", value: "smb_v3" },
+      { label: "NFS v3", value: "nfs_v3" },
+      { label: "NFS v4.1", value: "nfs_v41" },
+      { label: "S3", value: "s3" },
+    ],
+  },
+  {
+    id: "sourceShareSizeTb",
+    text: "File share size in GB",
+    type: "input",
+    placeholder: "Enter file share size (GB)",
+  },
+  {
+    id: "sourceIops",
+    text: "IOPS",
+    type: "input",
+    placeholder: "Enter required IOPS",
+  },
+  {
+    id: "sourceThroughputMibps",
+    text: "Throughput (MiB/s)",
+    type: "input",
+    placeholder: "Enter required throughput (MiB/s)",
+  },
+  {
+    id: "comfortFactor",
+    text: "Comfort factor",
+    type: "select",
+    defaultValue: "1.0",
+    options: [
+      { label: "1.0", value: "1.0" },
+      { label: "1.2", value: "1.2" },
+      { label: "1.5", value: "1.5" },
+      { label: "2.0", value: "2.0" },
+    ],
+  },
+  {
+    id: "assessmentCriteria",
+    text: "Assessment criteria",
+    type: "select",
+    placeholder: "— Select assessment criteria —",
+    options: [
+      { label: "Perf-based", value: "perf_based" },
+      { label: "As on-premises", value: "as_on_premises" },
+    ],
+  },
+  {
+    id: "workloadType",
+    text: "Select the workload type for your file storage data",
+    type: "select",
+    placeholder: "— Select workload type —",
+    note: "This selection is used only to calculate IOPS and transactions costs for all eligible storage SKUs.",
+    options: [
+      {
+        label: "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+        value: "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+      },
+      {
+        label: "Databases and stateful app components incl. logs, app state, exports, CI/CD",
+        value: "Databases and stateful app components incl. logs, app state, exports, CI/CD",
+      },
+      {
+        label: "General-purpose file shares / team shares (incl. user data shares)",
+        value: "General-purpose file shares / team shares (incl. user data shares)",
+      },
+      {
+        label: "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
+        value: "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
+      },
+      {
+        label: "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+        value: "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+      },
+    ],
+  },
+  {
     id: "blobAccessFrequency",
-    text: "Select the access frequency",
+    text: "Select the access frequency [Applicable for AzBlob]",
     type: "select",
     // Only shown when Azure Blobs is among the selected target services
     showIf: { targetService: { includes: "blobs" } },
@@ -164,43 +247,14 @@ export const questions = [
   },
   {
     id: "filesMediaType",
-    text: "Select the media type",
-    type: "select",
+    text: "Select the media type [Applicable for AzFiles]",
+    type: "multiselect",
+    defaultValues: ["ssd"],
     // Only shown when Azure Files is among the selected target services
     showIf: { targetService: { includes: "files" } },
     options: [
       { label: "Premium SSD", value: "ssd" },
       { label: "Standard HDD", value: "hdd" },
-    ],
-  },
-  {
-    id: "workloadType",
-    text: "Select the workload type for your file storage data",
-    type: "select",
-    note: "This selection is used only to calculate IOPS and transactions costs for all eligible storage SKUs.",
-    // Only shown when Azure Files is among the selected target services
-    showIf: { targetService: { includes: "files" } },
-    options: [
-      {
-        label: "Enterprise and mission-critical workloads (low latency, high and consistent IOPS)",
-        value: "enterprise",
-      },
-      {
-        label: "Databases and stateful application components (random I/O, frequent small reads/writes, performance sensitivity)",
-        value: "databases",
-      },
-      {
-        label: "General-purpose file shares / team shares (mixed read/write, moderate performance needs, many small files)",
-        value: "general",
-      },
-      {
-        label: "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier mainly for durability and scale)",
-        value: "hybrid",
-      },
-      {
-        label: "Infrequently accessed data / archives retained online (compliance, historical data)",
-        value: "archive",
-      },
     ],
   },
 ];

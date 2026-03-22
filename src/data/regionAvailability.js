@@ -5,10 +5,14 @@
  *  - Azure Blob Storage access tiers (Hot/Cool/Cold/Archive) are treated as
  *    available across Azure public regions used by this app.
  *    https://learn.microsoft.com/azure/storage/blobs/access-tiers-overview
- *  - Azure Files Standard HDD Provisioned v2: GA in all Azure public regions
+ *  - Azure Files Standard HDD Provisioned v2: generally available in all Azure
+ *    public cloud regions used by this app.
  *    https://learn.microsoft.com/azure/storage/files/understanding-billing#provisioned-v2-availability
- *  - Azure Files Premium SSD Provisioned v2: GA in all Azure public regions
- *    https://learn.microsoft.com/azure/storage/files/understanding-billing#provisioned-v2-availability
+ *  - Azure Files Premium SSD (classic Microsoft.Storage file shares):
+ *    supported in a subset of Azure regions for LRS/ZRS. The app's current
+ *    selectable public regions are fully covered for SSD-LRS as of 2026-03-22,
+ *    so SKU-level SSD region exclusions are currently empty for this region list.
+ *    https://learn.microsoft.com/azure/storage/files/redundancy-premium-file-shares
  *  - Archive tier constraints are redundancy-based (not region-list-based):
  *    archive is supported with LRS/GRS/RA-GRS and not with ZRS/GZRS/RA-GZRS.
  *    https://learn.microsoft.com/azure/storage/common/storage-redundancy
@@ -107,6 +111,19 @@ const ARCHIVE_REGIONS = new Set(
   [...PUBLIC_REGIONS].filter((region) => !ARCHIVE_UNSUPPORTED_REGIONS.has(region))
 );
 
+// Azure Files Premium SSD LRS support verified from Microsoft Learn on 2026-03-22.
+// For the app's current PUBLIC_REGIONS catalog, this set is currently equivalent
+// to PUBLIC_REGIONS; exclusions are tracked explicitly for future updates.
+const FILES_PREMIUM_SSD_LRS_REGIONS = new Set(PUBLIC_REGIONS);
+const FILES_PREMIUM_SSD_UNSUPPORTED_REGIONS = new Set(
+  [...PUBLIC_REGIONS].filter((region) => !FILES_PREMIUM_SSD_LRS_REGIONS.has(region))
+);
+
+// Keep this alias in case future SKU-level exclusions need to be populated.
+const FILES_PREMIUM_SSD_REGIONS = new Set(
+  [...PUBLIC_REGIONS].filter((region) => !FILES_PREMIUM_SSD_UNSUPPORTED_REGIONS.has(region))
+);
+
 // Regions where Azure NetApp Files is GA (using the region values from treeConfig.js)
 const ANF_REGIONS = new Set([
   // Americas
@@ -171,7 +188,7 @@ export const outcomeRegionAvailability = {
   "blob-cool":          PUBLIC_REGIONS,
   "blob-archive":       ARCHIVE_REGIONS,
   "files-standard-hdd": PUBLIC_REGIONS,
-  "files-premium-ssd":  PUBLIC_REGIONS,
+  "files-premium-ssd":  FILES_PREMIUM_SSD_REGIONS,
   "anf-default":        ANF_REGIONS,
 };
 
