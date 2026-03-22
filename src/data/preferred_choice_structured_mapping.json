@@ -1,0 +1,662 @@
+[
+  {
+    "id": "pcm-001",
+    "workloadType": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+    "sourceProtocolLabel": "SMB 2.x, 3.x",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3"
+    ],
+    "sourceProtocolKey": "smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": null,
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files Premium SSD"
+    }
+  },
+  {
+    "id": "pcm-002",
+    "workloadType": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+    "sourceProtocolLabel": "NFS 3, 4.1",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "nfs_v41"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "First Azure Blob (Hot) if NFS v3 then Azure Files Premium SSD"
+    }
+  },
+  {
+    "id": "pcm-003",
+    "workloadType": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+    "sourceProtocolLabel": "S3",
+    "sourceProtocolValues": [
+      "s3"
+    ],
+    "sourceProtocolKey": "s3",
+    "preferredFilesOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Blob Hot (blob-hot), or Cool/other as selected"
+    }
+  },
+  {
+    "id": "pcm-004",
+    "workloadType": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+    "sourceProtocolLabel": "SMB and NFS",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "nfs_v3",
+      "nfs_v41"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files-premium-SSD for all SMB versions;  \nAzure Blob (Hot) if v3 then Azure Files Premium SSD"
+    }
+  },
+  {
+    "id": "pcm-005",
+    "workloadType": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+    "sourceProtocolLabel": "SMB and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files Premium SSD for all SMB versions;\nAzBlob Hot (or Cool/other as selected)"
+    }
+  },
+  {
+    "id": "pcm-006",
+    "workloadType": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+    "sourceProtocolLabel": "NFS and S3",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+s3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "AzBlob Hot (or Cool/other as selected) with NFS v3 then AzFiles SSD; \nAzure Blob Hot (blob-hot), or Cool/other as selected"
+    }
+  },
+  {
+    "id": "pcm-007",
+    "workloadType": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+    "sourceProtocolLabel": "SMB, NFS and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "nfs_v3",
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+s3+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files Premium SSD for all SMB version;\nAzBlob Hot (or Cool/other as selected) for NFS v3, S3 and then Azure Files Premium SSD;\nAzure Blob Hot (blob-hot), or Cool/other as selected;"
+    }
+  },
+  {
+    "id": "pcm-008",
+    "workloadType": "Databases and stateful app components incl. logs, app state, exports, CI/CD",
+    "sourceProtocolLabel": "SMB 2.x, 3.x",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3"
+    ],
+    "sourceProtocolKey": "smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": null,
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files Premium SSD"
+    }
+  },
+  {
+    "id": "pcm-009",
+    "workloadType": "Databases and stateful app components incl. logs, app state, exports, CI/CD",
+    "sourceProtocolLabel": "NFS 3, 4.1",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "nfs_v41"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "First Azure Blob (Hot) if NFSv3 then Azure Files Premium SSD"
+    }
+  },
+  {
+    "id": "pcm-010",
+    "workloadType": "Databases and stateful app components incl. logs, app state, exports, CI/CD",
+    "sourceProtocolLabel": "S3",
+    "sourceProtocolValues": [
+      "s3"
+    ],
+    "sourceProtocolKey": "s3",
+    "preferredFilesOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Blob Hot (blob-hot), or Cool/other as selected"
+    }
+  },
+  {
+    "id": "pcm-011",
+    "workloadType": "Databases and stateful app components incl. logs, app state, exports, CI/CD",
+    "sourceProtocolLabel": "SMB and NFS",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "nfs_v3",
+      "nfs_v41"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files-premium-SSD for SMB all versions;  \nAzure Blob (Hot) if NFSv3 then Azure Files Premium SSD"
+    }
+  },
+  {
+    "id": "pcm-012",
+    "workloadType": "Databases and stateful app components incl. logs, app state, exports, CI/CD",
+    "sourceProtocolLabel": "SMB and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files Premium SSD for SMB for all version;\nAzBlob Hot (or Cool/other as selected)"
+    }
+  },
+  {
+    "id": "pcm-013",
+    "workloadType": "Databases and stateful app components incl. logs, app state, exports, CI/CD",
+    "sourceProtocolLabel": "NFS and S3",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+s3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "AzBlob Hot (or Cool/other as selected) with NFS v3 then AzFiles SSD; \nAzure Blob Hot (blob-hot), or Cool/other as selected"
+    }
+  },
+  {
+    "id": "pcm-014",
+    "workloadType": "Databases and stateful app components incl. logs, app state, exports, CI/CD",
+    "sourceProtocolLabel": "SMB, NFS and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "nfs_v3",
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+s3+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files Premium SSD for all SMB version;\nAzBlob Hot (or Cool/other as selected) for NFS v3, S3 and then Azure Files Premium SSD;\nAzure Blob Hot (blob-hot), or Cool/other as selected;"
+    }
+  },
+  {
+    "id": "pcm-015",
+    "workloadType": "General-purpose file shares / team shares (incl. user data shares)",
+    "sourceProtocolLabel": "SMB 2.x, 3.x",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3"
+    ],
+    "sourceProtocolKey": "smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": null,
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files Standard HDD (files-standard-hdd), upgrade to files-premium-ssd if needed"
+    }
+  },
+  {
+    "id": "pcm-016",
+    "workloadType": "General-purpose file shares / team shares (incl. user data shares)",
+    "sourceProtocolLabel": "NFS 3, 4.1",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "nfs_v41"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "First Azure Blob (Hot) if NFS v3 then Azure Files Premium SSD (NFS)"
+    }
+  },
+  {
+    "id": "pcm-017",
+    "workloadType": "General-purpose file shares / team shares (incl. user data shares)",
+    "sourceProtocolLabel": "S3",
+    "sourceProtocolValues": [
+      "s3"
+    ],
+    "sourceProtocolKey": "s3",
+    "preferredFilesOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Blob Hot (blob-hot), or Cool/other as selected"
+    }
+  },
+  {
+    "id": "pcm-018",
+    "workloadType": "General-purpose file shares / team shares (incl. user data shares)",
+    "sourceProtocolLabel": "SMB and NFS",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "nfs_v3",
+      "nfs_v41"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files -Standard- HDD for all SMB versions;\nAzure Blob (Hot) if v3 then Azure Files Premium SSD (NFS)"
+    }
+  },
+  {
+    "id": "pcm-019",
+    "workloadType": "General-purpose file shares / team shares (incl. user data shares)",
+    "sourceProtocolLabel": "SMB and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files -Standard- HDD for all SMB versions;\nAzBlob Hot (or Cool/other as selected)"
+    }
+  },
+  {
+    "id": "pcm-020",
+    "workloadType": "General-purpose file shares / team shares (incl. user data shares)",
+    "sourceProtocolLabel": "NFS and S3",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+s3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "AzBlob Hot (or Cool/other as selected) with NFS v3 then AzFiles SSD; \nAzure Blob Hot (blob-hot), or Cool/other as selected;"
+    }
+  },
+  {
+    "id": "pcm-021",
+    "workloadType": "General-purpose file shares / team shares (incl. user data shares)",
+    "sourceProtocolLabel": "SMB, NFS and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "nfs_v3",
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+s3+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files Standard HDD for all SMB version;\nAzBlob Hot (or Cool/other as selected) for NFS v3, S3 and then Azure Files Premium SSD;\nAzure Blob Hot (blob-hot), or Cool/other as selected;"
+    }
+  },
+  {
+    "id": "pcm-022",
+    "workloadType": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
+    "sourceProtocolLabel": "SMB 2.x, 3.x",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3"
+    ],
+    "sourceProtocolKey": "smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": null,
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files Standard HDD (files-standard-hdd), upgrade to files-premium-ssd if needed"
+    }
+  },
+  {
+    "id": "pcm-023",
+    "workloadType": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
+    "sourceProtocolLabel": "NFS 3, 4.1",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "nfs_v41"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "First Azure Blob (Hot) if NFS v3 then Azure Files Premium SSD (NFS)"
+    }
+  },
+  {
+    "id": "pcm-024",
+    "workloadType": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
+    "sourceProtocolLabel": "S3",
+    "sourceProtocolValues": [
+      "s3"
+    ],
+    "sourceProtocolKey": "s3",
+    "preferredFilesOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Blob Hot (blob-hot), or Cool/other as selected"
+    }
+  },
+  {
+    "id": "pcm-025",
+    "workloadType": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
+    "sourceProtocolLabel": "SMB and NFS",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "nfs_v3",
+      "nfs_v41"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files -Standard- HDD for all SMB versions;\nAzure Blob (Hot) if v3 then Azure Files Premium SSD (NFS)"
+    }
+  },
+  {
+    "id": "pcm-026",
+    "workloadType": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
+    "sourceProtocolLabel": "SMB and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files -Standard- HDD for all SMB versions;\nAzBlob Hot (or Cool/other as selected)"
+    }
+  },
+  {
+    "id": "pcm-027",
+    "workloadType": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
+    "sourceProtocolLabel": "NFS and S3",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+s3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "AzBlob Hot (or Cool/other as selected) with NFS v3 then AzFiles SSD; \nAzure Blob Hot (blob-hot), or Cool/other as selected;"
+    }
+  },
+  {
+    "id": "pcm-028",
+    "workloadType": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
+    "sourceProtocolLabel": "SMB, NFS and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "nfs_v3",
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+s3+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Files Standard HDD for all SMB version;\nAzBlob Hot (or Cool/other as selected) for NFS v3, S3 and then Azure Files Premium SSD;\nAzure Blob Hot (blob-hot), or Cool/other as selected;"
+    }
+  },
+  {
+    "id": "pcm-029",
+    "workloadType": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+    "sourceProtocolLabel": "SMB 2.x, 3.x",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3"
+    ],
+    "sourceProtocolKey": "smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": null,
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Archive (default), or as selected by the user",
+      "originalRecommendationText": "Azure Files Standard HDD (files-standard-hdd), upgrade to files-premium-ssd if needed"
+    }
+  },
+  {
+    "id": "pcm-030",
+    "workloadType": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+    "sourceProtocolLabel": "NFS 3, 4.1",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "nfs_v41"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-archive",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Archive (default), or as selected by the user",
+      "originalRecommendationText": "First Azure Blob (Cold) if NFS v3 then Azure Files Premium SSD"
+    }
+  },
+  {
+    "id": "pcm-031",
+    "workloadType": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+    "sourceProtocolLabel": "S3",
+    "sourceProtocolValues": [
+      "s3"
+    ],
+    "sourceProtocolKey": "s3",
+    "preferredFilesOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-archive",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Archive (default), or as selected by the user",
+      "originalRecommendationText": "Azure Blob Archive (blob-archive), or as selected by user"
+    }
+  },
+  {
+    "id": "pcm-032",
+    "workloadType": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+    "sourceProtocolLabel": "SMB and NFS",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "nfs_v3",
+      "nfs_v41"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-archive",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Archive (default), or as selected by the user",
+      "originalRecommendationText": "Azure Files -Standard- HDD for all SMB versions;\nAzure Blob (Cold) if v3 then Azure Files Premium SSD"
+    }
+  },
+  {
+    "id": "pcm-033",
+    "workloadType": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+    "sourceProtocolLabel": "SMB and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-archive",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Archive (default), or as selected by the user",
+      "originalRecommendationText": "Azure Files -Standard- HDD for all SMB versions;\nAzure Blob Archive (blob-archive), or as selected by user;"
+    }
+  },
+  {
+    "id": "pcm-034",
+    "workloadType": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+    "sourceProtocolLabel": "NFS and S3",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+s3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-archive",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Archive (default), or as selected by the user",
+      "originalRecommendationText": "AzBlob Cold (or Cool/other as selected) for NFS v3 then AzFiles SSD; \nAzure Blob Archive, or Cool/other as selected;"
+    }
+  },
+  {
+    "id": "pcm-035",
+    "workloadType": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+    "sourceProtocolLabel": "SMB, NFS and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "smb_v3",
+      "nfs_v3",
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+nfs_v41+s3+smb_v2+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-archive",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Archive (default), or as selected by the user",
+      "originalRecommendationText": "Azure Files Standard HDD for all SMB version;\nAzBlob Cold (or other as selected) for NFS v3, then Azure Files Premium SSD;\nAzure Blob Archive or Cool/other as selected;"
+    }
+  }
+]

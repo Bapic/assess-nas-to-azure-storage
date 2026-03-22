@@ -1,6 +1,7 @@
 import { isAvailableInRegion } from "../data/regionAvailability.js";
 import { serviceOutcomeMap } from "../data/treeConfig.js";
 import { supportsRedundancy } from "../data/redundancyAvailability.js";
+import preferredChoiceStructuredMappings from "../data/preferred_choice_structured_mapping.json";
 
 const blobTierMap = {
   hot: "blob-hot",
@@ -13,6 +14,7 @@ const blobTierOrder = ["blob-hot", "blob-cool", "blob-cold", "blob-archive"];
 const redundancyFallbackChain = ["gzrs", "grs", "zrs", "lrs"];
 const filesMediaTypeMap = { ssd: "files-premium-ssd", hdd: "files-standard-hdd" };
 const filesOutcomeIds = Object.values(filesMediaTypeMap);
+const blobOutcomeIds = Object.values(blobTierMap);
 const filesPerformanceThresholds = {
   maxShareSizeGb: 256000,
   hddMaxIops: 50000,
@@ -44,10 +46,9 @@ function getAlternateFilesOutcomeId(outcomeId) {
  * Decide Azure Files SKU suitability from source scale/performance inputs.
  *
  * Rule set:
- *  - both eligible:   size < 256000 GB AND IOPS < 50000 AND throughput < 5120 MiB/s
- *  - SSD only:        size < 256000 GB AND 50000 < IOPS < 102400 AND 5120 < throughput < 10340 MiB/s
- *  - none eligible:   size > 256000 GB OR IOPS > 102400 OR throughput > 10340 MiB/s
- *  - all other in-range combinations default to both eligible.
+ *  - HDD eligible:    size < 256000 GB AND IOPS < 50000 AND throughput < 5120 MiB/s
+ *  - SSD eligible:    size < 256000 GB AND IOPS < 102400 AND throughput < 10340 MiB/s
+ *  - A SKU is Not Ready when any of its threshold limits are reached/exceeded.
  */
 export function getFilesPerformanceSkuEligibility(answers) {
   const shareSizeGb = Number(answers?.sourceShareSizeTb);
@@ -66,24 +67,17 @@ export function getFilesPerformanceSkuEligibility(answers) {
     };
   }
 
-  const isBothSkusEligible =
+  const hddEligible =
     shareSizeGb < filesPerformanceThresholds.maxShareSizeGb
     && iops < filesPerformanceThresholds.hddMaxIops
     && throughputMibps < filesPerformanceThresholds.hddMaxThroughputMibps;
 
-  const isSsdOnlyEligible =
+  const ssdEligible =
     shareSizeGb < filesPerformanceThresholds.maxShareSizeGb
-    && iops > filesPerformanceThresholds.hddMaxIops
     && iops < filesPerformanceThresholds.filesMaxIops
-    && throughputMibps > filesPerformanceThresholds.hddMaxThroughputMibps
     && throughputMibps < filesPerformanceThresholds.filesMaxThroughputMibps;
 
-  const exceedsFilesLimits =
-    shareSizeGb > filesPerformanceThresholds.maxShareSizeGb
-    || iops > filesPerformanceThresholds.filesMaxIops
-    || throughputMibps > filesPerformanceThresholds.filesMaxThroughputMibps;
-
-  if (exceedsFilesLimits) {
+  if (!hddEligible && !ssdEligible) {
     return {
       scenario: "none",
       allowedOutcomeIds: [],
@@ -92,7 +86,7 @@ export function getFilesPerformanceSkuEligibility(answers) {
     };
   }
 
-  if (isSsdOnlyEligible) {
+  if (!hddEligible && ssdEligible) {
     return {
       scenario: "ssd-only",
       allowedOutcomeIds: [filesMediaTypeMap.ssd],
@@ -101,7 +95,7 @@ export function getFilesPerformanceSkuEligibility(answers) {
     };
   }
 
-  if (isBothSkusEligible) {
+  if (hddEligible && ssdEligible) {
     return {
       scenario: "both",
       allowedOutcomeIds: [...filesOutcomeIds],
@@ -111,8 +105,8 @@ export function getFilesPerformanceSkuEligibility(answers) {
   }
 
   return {
-    scenario: "both",
-    allowedOutcomeIds: [...filesOutcomeIds],
+    scenario: ssdEligible ? "ssd-only" : "none",
+    allowedOutcomeIds: ssdEligible ? [filesMediaTypeMap.ssd] : [],
     metrics: { shareSizeGb, iops, throughputMibps },
     thresholds: filesPerformanceThresholds,
   };
@@ -408,4 +402,117 @@ export function getEligibleOutcomes(outcomes, answers) {
       )
     );
   });
+}
+
+function getCanonicalProtocolLabel(values) {
+  const normalizedValues = Array.isArray(values)
+    ? values.map((value) => String(value).toLowerCase())
+    : [String(values ?? "").toLowerCase()];
+  const hasS3 = normalizedValues.includes("s3");
+  const hasNfsV3 = normalizedValues.includes("nfs_v3");
+  const hasNfsV41 = normalizedValues.includes("nfs_v41");
+  const hasNfs = hasNfsV3 || hasNfsV41;
+  const hasSmb = normalizedValues.includes("smb_v2") || normalizedValues.includes("smb_v3");
+
+  if (hasSmb && hasNfs && hasS3) return "SMB, NFS and S3";
+  if (hasSmb && hasNfs) return "SMB and NFS";
+  if (hasSmb && hasS3) return "SMB and S3";
+  if (hasNfs && hasS3) return "NFS and S3";
+  if (hasS3) return "S3";
+  if (hasNfsV3 && hasNfsV41) return "NFS 3, 4.1";
+  if (hasNfs) return "NFS";
+  if (hasSmb) return "SMB 2.x, 3.x";
+  return "";
+}
+
+function getCanonicalProtocolKey(values) {
+  const normalizedValues = Array.isArray(values)
+    ? values.map((value) => String(value).toLowerCase())
+    : [String(values ?? "").toLowerCase()];
+
+  const hasSmb = normalizedValues.includes("smb_v2") || normalizedValues.includes("smb_v3");
+  const hasNfsV3 = normalizedValues.includes("nfs_v3");
+  const hasNfsV41 = normalizedValues.includes("nfs_v41");
+  const hasS3 = normalizedValues.includes("s3");
+
+  const canonicalValues = [];
+  if (hasSmb) canonicalValues.push("smb_v2", "smb_v3");
+  if (hasNfsV3) canonicalValues.push("nfs_v3");
+  if (hasNfsV41) canonicalValues.push("nfs_v41");
+  if (hasS3) canonicalValues.push("s3");
+
+  return [...new Set(canonicalValues)].sort().join("+");
+}
+
+function findPreferredChoiceRow(answers) {
+  const workloadType = answers?.workloadType;
+  const canonicalProtocol = getCanonicalProtocolLabel(answers?.sourceProtocol);
+  const canonicalProtocolKey = getCanonicalProtocolKey(answers?.sourceProtocol);
+  if (!workloadType || !canonicalProtocolKey) {
+    return { row: null, canonicalProtocol, canonicalProtocolKey };
+  }
+
+  const row = preferredChoiceStructuredMappings.find((item) =>
+    item.workloadType === workloadType
+    && item.sourceProtocolKey === canonicalProtocolKey
+  ) ?? null;
+
+  return { row, canonicalProtocol, canonicalProtocolKey };
+}
+
+/**
+ * Track B = preferred-choice mapping (workload + source protocol) overlaid on
+ * Track A eligibility. Preferred choice prevails in recommendation when mismatch exists.
+ */
+export function getTrackBSelection(outcomes, answers, trackAEligibleOutcomes = []) {
+  const trackAOutcomeIds = new Set((trackAEligibleOutcomes ?? []).map((item) => item.id));
+  const selectedServices = Array.isArray(answers?.targetService) ? answers.targetService : [];
+  const sourceProtocolValues = Array.isArray(answers?.sourceProtocol)
+    ? answers.sourceProtocol.map((value) => String(value).toLowerCase())
+    : [String(answers?.sourceProtocol ?? "").toLowerCase()];
+  const sourceHasS3 = sourceProtocolValues.includes("s3");
+  const sourceHasNfsV3 = sourceProtocolValues.includes("nfs_v3");
+  const autoIncludeBlobForProtocolPriority =
+    selectedServices.includes("files") && (sourceHasS3 || sourceHasNfsV3) && !selectedServices.includes("blobs");
+  const effectiveServices = autoIncludeBlobForProtocolPriority
+    ? [...new Set([...selectedServices, "blobs"])]
+    : selectedServices;
+  const allowedByService = new Set(effectiveServices.flatMap((svc) => serviceOutcomeMap[svc] ?? []));
+
+  const { row: preferredRow, canonicalProtocol, canonicalProtocolKey } = findPreferredChoiceRow(answers);
+  const preferredOutcomeIds = [
+    preferredRow?.preferredBlobOutcomeId,
+    preferredRow?.preferredFilesOutcomeId,
+  ].filter(Boolean);
+
+  const preferredByService = {
+    blob: preferredOutcomeIds.find((id) => blobOutcomeIds.includes(id)) ?? null,
+    files: preferredOutcomeIds.find((id) => filesOutcomeIds.includes(id)) ?? null,
+  };
+
+  const trackBOutcomeSet = new Set(
+    (trackAEligibleOutcomes ?? [])
+      .map((outcome) => outcome.id)
+      .filter((id) => allowedByService.has(id))
+  );
+
+  preferredOutcomeIds
+    .filter((id) => allowedByService.has(id))
+    .forEach((id) => trackBOutcomeSet.add(id));
+
+  const trackBOutcomes = (outcomes ?? []).filter((outcome) => trackBOutcomeSet.has(outcome.id));
+
+  const matchedPreferredToTrackA = {
+    blob: preferredByService.blob ? trackAOutcomeIds.has(preferredByService.blob) : null,
+    files: preferredByService.files ? trackAOutcomeIds.has(preferredByService.files) : null,
+  };
+
+  return {
+    outcomes: trackBOutcomes,
+    preferredByService,
+    preferredRow,
+    canonicalProtocol,
+    canonicalProtocolKey,
+    matchedPreferredToTrackA,
+  };
 }

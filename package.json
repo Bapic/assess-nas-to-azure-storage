@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "sync:preferred-mapping": "node scripts/generatePreferredChoiceStructuredMapping.mjs",
+    "predev": "npm run sync:preferred-mapping",
     "dev": "vite",
+    "prebuild": "npm run sync:preferred-mapping",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import DecisionTree from './components/DecisionTree'
 import Results from './components/Results'
 import { questions, outcomes } from './data/treeConfig'
-import { getEligibleOutcomes } from './utils/matchOutcomes'
+import { getEligibleOutcomes, getTrackBSelection } from './utils/matchOutcomes'
 
 function App() {
   const [answers, setAnswers] = useState(null)
@@ -15,7 +15,10 @@ function App() {
     setAnswers(null)
   }
 
-  const eligibleOutcomes = answers ? getEligibleOutcomes(outcomes, answers) : []
+  const trackAOutcomes = answers ? getEligibleOutcomes(outcomes, answers) : []
+  const trackBSelection = answers
+    ? getTrackBSelection(outcomes, answers, trackAOutcomes)
+    : { outcomes: [], preferredByService: {}, preferredRow: null, canonicalProtocol: '', matchedPreferredToTrackA: {} }
 
   return (
     <div className="app">
@@ -28,7 +31,12 @@ function App() {
         <DecisionTree questions={questions} onComplete={handleComplete} />
       ) : (
         <Results
-          outcomes={eligibleOutcomes}
+          outcomes={trackAOutcomes}
+          trackBOutcomes={trackBSelection.outcomes}
+          trackBPreferredByService={trackBSelection.preferredByService}
+          trackBPreferredRow={trackBSelection.preferredRow}
+          trackBCanonicalProtocol={trackBSelection.canonicalProtocol}
+          trackBMatchedPreferredToTrackA={trackBSelection.matchedPreferredToTrackA}
           allOutcomes={outcomes}
           answers={answers}
           questions={questions}
