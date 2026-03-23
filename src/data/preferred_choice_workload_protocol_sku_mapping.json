@@ -10,6 +10,28 @@
     "Source protocol": "SMB 2.x, 3.x",
     "Prioritised Target SKU/Recommended": "Azure Files Premium SSD"
   },
+    {
+    "Workload type": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 MB to 5 GB (typical 100 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "10 to 200 (typical 100)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 8 (typical 5)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Medium",
+    "Default Azure Files media tendency": "SSD (Premium v2)",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "SMB 2.x",
+    "Prioritised Target SKU/Recommended": "Azure Files Premium SSD"
+  },
+    {
+    "Workload type": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 MB to 5 GB (typical 100 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "10 to 200 (typical 100)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 8 (typical 5)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Medium",
+    "Default Azure Files media tendency": "SSD (Premium v2)",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "SMB 3.x",
+    "Prioritised Target SKU/Recommended": "Azure Files Premium SSD"
+  },
   {
     "Workload type": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
     "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 MB to 5 GB (typical 100 MB)",
@@ -19,6 +41,28 @@
     "Default Azure Files media tendency": "SSD (Premium v2)",
     "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
     "Source protocol": "NFS 3, 4.1",
+    "Prioritised Target SKU/Recommended": "First Azure Blob (Hot) if NFS v3 then Azure Files Premium SSD for NFS 4.1 and also if Blob is not suitable or eligible for Azure Blob Storage"
+  },
+  {
+    "Workload type": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 MB to 5 GB (typical 100 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "10 to 200 (typical 100)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 8 (typical 5)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Medium",
+    "Default Azure Files media tendency": "SSD (Premium v2)",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "NFS 3",
+    "Prioritised Target SKU/Recommended": "First Azure Blob (Hot) if NFS v3 then Azure Files Premium SSD"
+  },
+   {
+    "Workload type": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 MB to 5 GB (typical 100 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "10 to 200 (typical 100)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 8 (typical 5)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Medium",
+    "Default Azure Files media tendency": "SSD (Premium v2)",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "NFS 4.1",
     "Prioritised Target SKU/Recommended": "First Azure Blob (Hot) if NFS v3 then Azure Files Premium SSD"
   },
   {
@@ -30,7 +74,7 @@
     "Default Azure Files media tendency": "SSD (Premium v2)",
     "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
     "Source protocol": "S3",
-    "Prioritised Target SKU/Recommended": "Azure Blob Hot (blob-hot), or Cool/other as selected"
+    "Prioritised Target SKU/Recommended": "Azure Blob Hot (blob-hot), or Cool/other as selected then Azure Files Premium SSD if Blob is not suitable or eligible for Azure Blob Storage"
   },
   {
     "Workload type": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
@@ -41,7 +85,7 @@
     "Default Azure Files media tendency": "SSD (Premium v2)",
     "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
     "Source protocol": "SMB and NFS",
-    "Prioritised Target SKU/Recommended": "Azure Files-premium-SSD for all SMB versions;  \nAzure Blob (Hot) if v3 then Azure Files Premium SSD"
+    "Prioritised Target SKU/Recommended": "Azure Files-premium-SSD for all SMB versions;  \nAzure Blob (Hot) if v3 then Azure Files Premium SSD if Blob is not suitable or eligible for Azure Blob Storage"
   },
   {
     "Workload type": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
@@ -52,7 +96,7 @@
     "Default Azure Files media tendency": "SSD (Premium v2)",
     "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
     "Source protocol": "SMB and S3",
-    "Prioritised Target SKU/Recommended": "Azure Files Premium SSD for all SMB versions;\nAzBlob Hot (or Cool/other as selected)"
+    "Prioritised Target SKU/Recommended": "Azure Files Premium SSD for all SMB versions;\nAzBlob Hot (or Cool/other as selected) for S3 and then  Files premium SSD if Blob is not suitable or eligible for Azure Blob Storage"
   },
   {
     "Workload type": "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
@@ -87,6 +131,28 @@
     "Source protocol": "SMB 2.x, 3.x",
     "Prioritised Target SKU/Recommended": "Azure Files Premium SSD"
   },
+    {
+    "Workload type": "Databases and stateful app components incl. logs, app state, exports, CI/CD",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "10 KB to 100 MB (typical 1 to 2 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 5,000 (typical 200 to 500)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 15 (typical 5 to 10)",
+    "File churn (used for Blob IO transaction calculations baseline)": "High (can be very high for CI/CD)",
+    "Default Azure Files media tendency": "SSD (Premium v2)",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "SMB 2.x",
+    "Prioritised Target SKU/Recommended": "Azure Files Premium SSD"
+  },
+    {
+    "Workload type": "Databases and stateful app components incl. logs, app state, exports, CI/CD",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "10 KB to 100 MB (typical 1 to 2 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 5,000 (typical 200 to 500)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 15 (typical 5 to 10)",
+    "File churn (used for Blob IO transaction calculations baseline)": "High (can be very high for CI/CD)",
+    "Default Azure Files media tendency": "SSD (Premium v2)",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "SMB 3.x",
+    "Prioritised Target SKU/Recommended": "Azure Files Premium SSD"
+  },
   {
     "Workload type": "Databases and stateful app components incl. logs, app state, exports, CI/CD",
     "Expected avg file size (used for Blob IO transaction calculations baseline)": "10 KB to 100 MB (typical 1 to 2 MB)",
@@ -96,7 +162,29 @@
     "Default Azure Files media tendency": "SSD (Premium v2)",
     "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
     "Source protocol": "NFS 3, 4.1",
-    "Prioritised Target SKU/Recommended": "First Azure Blob (Hot) if NFSv3 then Azure Files Premium SSD"
+    "Prioritised Target SKU/Recommended": "First Azure Blob (Hot) if NFSv3 then Azure Files Premium SSD for NFS 4.1 and if Blob is not suitable or eligible for Azure Blob Storage"
+  },
+    {
+    "Workload type": "Databases and stateful app components incl. logs, app state, exports, CI/CD",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "10 KB to 100 MB (typical 1 to 2 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 5,000 (typical 200 to 500)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 15 (typical 5 to 10)",
+    "File churn (used for Blob IO transaction calculations baseline)": "High (can be very high for CI/CD)",
+    "Default Azure Files media tendency": "SSD (Premium v2)",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "NFS 3",
+    "Prioritised Target SKU/Recommended": "First Azure Blob (Hot) if NFSv3 then Azure Files Premium SSD if Blob is not suitable or eligible for Azure Blob Storage"
+  },
+    {
+    "Workload type": "Databases and stateful app components incl. logs, app state, exports, CI/CD",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "10 KB to 100 MB (typical 1 to 2 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 5,000 (typical 200 to 500)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 15 (typical 5 to 10)",
+    "File churn (used for Blob IO transaction calculations baseline)": "High (can be very high for CI/CD)",
+    "Default Azure Files media tendency": "SSD (Premium v2)",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "NFS 4.1",
+    "Prioritised Target SKU/Recommended": "First Azure Files Premium SSD for NFS 4.1, then Azure Blob (Hot) or Cool/other as selected"
   },
   {
     "Workload type": "Databases and stateful app components incl. logs, app state, exports, CI/CD",
@@ -164,6 +252,28 @@
     "Source protocol": "SMB 2.x, 3.x",
     "Prioritised Target SKU/Recommended": "Azure Files Standard HDD (files-standard-hdd), upgrade to files-premium-ssd if needed"
   },
+    {
+    "Workload type": "General-purpose file shares / team shares (incl. user data shares)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 KB to 10 MB (typical 1 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 5,000 (typical 200)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 12 (typical 5)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Medium",
+    "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "SMB 2.x",
+    "Prioritised Target SKU/Recommended": "Azure Files Standard HDD (files-standard-hdd), upgrade to files-premium-ssd if needed"
+  },
+    {
+    "Workload type": "General-purpose file shares / team shares (incl. user data shares)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 KB to 10 MB (typical 1 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 5,000 (typical 200)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 12 (typical 5)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Medium",
+    "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "SMB 3.x",
+    "Prioritised Target SKU/Recommended": "Azure Files Standard HDD (files-standard-hdd), upgrade to files-premium-ssd if needed"
+  },
   {
     "Workload type": "General-purpose file shares / team shares (incl. user data shares)",
     "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 KB to 10 MB (typical 1 MB)",
@@ -173,6 +283,28 @@
     "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
     "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
     "Source protocol": "NFS 3, 4.1",
+    "Prioritised Target SKU/Recommended": "First Azure Blob (Hot) if NFS v3 then Azure Files Premium SSD (NFS)"
+  },
+  {
+    "Workload type": "General-purpose file shares / team shares (incl. user data shares)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 KB to 10 MB (typical 1 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 5,000 (typical 200)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 12 (typical 5)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Medium",
+    "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "NFS 3",
+    "Prioritised Target SKU/Recommended": "First Azure Blob (Hot) if NFS v3 then Azure Files Premium SSD (NFS)"
+  },
+  {
+    "Workload type": "General-purpose file shares / team shares (incl. user data shares)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 KB to 10 MB (typical 1 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 5,000 (typical 200)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 12 (typical 5)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Medium",
+    "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "NFS 4.1",
     "Prioritised Target SKU/Recommended": "First Azure Blob (Hot) if NFS v3 then Azure Files Premium SSD (NFS)"
   },
   {
@@ -239,7 +371,29 @@
     "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
     "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
     "Source protocol": "SMB 2.x, 3.x",
-    "Prioritised Target SKU/Recommended": "Azure Files Standard HDD (files-standard-hdd), upgrade to files-premium-ssd if needed"
+    "Prioritised Target SKU/Recommended": "Azure Files Standard HDD (files-standard-hdd), upgrade to files-premium-ssd if HDD is not suitable or eligible for Azure File Sync"
+  },
+    {
+    "Workload type": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 KB to 100 MB (typical 1 to 2 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 5,000 (typical 200)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 12 (typical 5)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Medium to Low",
+    "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "SMB 2.x",
+    "Prioritised Target SKU/Recommended": "Azure Files Standard HDD (files-standard-hdd), upgrade to files-premium-ssd if HDD is not suitable or eligible for Azure File Sync"
+  },
+    {
+    "Workload type": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 KB to 100 MB (typical 1 to 2 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 5,000 (typical 200)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 12 (typical 5)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Medium to Low",
+    "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "SMB 3.x",
+    "Prioritised Target SKU/Recommended": "Azure Files Standard HDD (files-standard-hdd), upgrade to files-premium-ssd if HDD is not suitable or eligible for Azure File Sync"
   },
   {
     "Workload type": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
@@ -250,6 +404,28 @@
     "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
     "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
     "Source protocol": "NFS 3, 4.1",
+    "Prioritised Target SKU/Recommended": "First Azure Blob (Hot) if NFS v3 then Azure Files Premium SSD (NFS)"
+  },
+  {
+    "Workload type": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 KB to 100 MB (typical 1 to 2 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 5,000 (typical 200)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 12 (typical 5)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Medium to Low",
+    "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "NFS 3",
+    "Prioritised Target SKU/Recommended": "First Azure Blob (Hot) if NFS v3 then Azure Files Premium SSD (NFS)"
+  },
+  {
+    "Workload type": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "50 KB to 100 MB (typical 1 to 2 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 5,000 (typical 200)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "3 to 12 (typical 5)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Medium to Low",
+    "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+    "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
+    "Source protocol": "NFS 4.1",
     "Prioritised Target SKU/Recommended": "First Azure Blob (Hot) if NFS v3 then Azure Files Premium SSD (NFS)"
   },
   {
@@ -272,7 +448,7 @@
     "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
     "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
     "Source protocol": "SMB and NFS",
-    "Prioritised Target SKU/Recommended": "Azure Files -Standard- HDD for all SMB versions;\nAzure Blob (Hot) if v3 then Azure Files Premium SSD (NFS)"
+    "Prioritised Target SKU/Recommended": "Azure Files -Standard- HDD for all SMB versions;\nAzure Blob (Hot) if NFS v3 then Azure Files Premium SSD (NFS)"
   },
   {
     "Workload type": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
@@ -283,7 +459,7 @@
     "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
     "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
     "Source protocol": "SMB and S3",
-    "Prioritised Target SKU/Recommended": "Azure Files -Standard- HDD for all SMB versions;\nAzBlob Hot (or Cool/other as selected)"
+    "Prioritised Target SKU/Recommended": "Azure Files -Standard- HDD for all SMB versions;\nAzBlob Hot (or Cool/other as selected) for S3"
   },
   {
     "Workload type": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
@@ -294,7 +470,7 @@
     "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
     "Azure Blob access tier tendency": "Hot (default), Cool or other as selected by the user",
     "Source protocol": "NFS and S3",
-    "Prioritised Target SKU/Recommended": "AzBlob Hot (or Cool/other as selected) with NFS v3 then AzFiles SSD; \nAzure Blob Hot (blob-hot), or Cool/other as selected;"
+    "Prioritised Target SKU/Recommended": "AzBlob Hot (or Cool/other as selected) with NFS v3 then AzFiles SSD; \nAzure Blob Hot (blob-hot) for S3 or Cool/other as selected;"
   },
   {
     "Workload type": "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
@@ -315,8 +491,8 @@
     "File churn (used for Blob IO transaction calculations baseline)": "Low",
     "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
     "Azure Blob access tier tendency": "Archive (default), or as selected by the user",
-    "Source protocol": "SMB",
-    "Prioritised Target SKU/Recommended": "Azure Files Standard HDD (files-standard-hdd), upgrade to files-premium-ssd if needed"
+    "Source protocol": "SMB 2.x",
+    "Prioritised Target SKU/Recommended": "Azure Files Standard HDD (files-standard-hdd), Then Azure Blob Archive (blob-archive), or as selected by user"
   },
   {
     "Workload type": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
@@ -326,9 +502,54 @@
     "File churn (used for Blob IO transaction calculations baseline)": "Low",
     "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
     "Azure Blob access tier tendency": "Archive (default), or as selected by the user",
-    "Source protocol": "NFS",
-    "Prioritised Target SKU/Recommended": "First Azure Blob (Cold) if NFS v3 then Azure Files Premium SSD"
+    "Source protocol": "SMB 3.x",
+    "Prioritised Target SKU/Recommended": "Azure Files Standard HDD (files-standard-hdd), Then Azure Blob Archive (blob-archive), or as selected by user"
   },
+  {
+    "Workload type": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "1 MB to 100 MB (typical 10 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 1,000 (typical 500)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "2 to 6 (typical 4)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Low",
+    "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+    "Azure Blob access tier tendency": "Archive (default), or as selected by the user",
+    "Source protocol": "NFS 3",
+    "Prioritised Target SKU/Recommended": "First Azure Blob Cold If NFS v3 (blob-archive), or as selected by user and then Azure Files Premium SSD for NFS 4.1"
+  },
+  {
+    "Workload type": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "1 MB to 100 MB (typical 10 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 1,000 (typical 500)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "2 to 6 (typical 4)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Low",
+    "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+    "Azure Blob access tier tendency": "Archive (default), or as selected by the user",
+    "Source protocol": "NFS 4.1",
+    "Prioritised Target SKU/Recommended": "First Azure Blob (Cold) if NFS v3 then Azure Blob Archive, or Cool/other as selected and then Azure Files Premium SSD if needed;"
+  },
+  {
+    "Workload type": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "1 MB to 100 MB (typical 10 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 1,000 (typical 500)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "2 to 6 (typical 4)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Low",
+    "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+    "Azure Blob access tier tendency": "Archive (default), or as selected by the user",
+    "Source protocol": "SMB 2.x, SMB 3.x",
+    "Prioritised Target SKU/Recommended": "Azure Files Standard- HDD for all SMB versions;\nAzBlob Hot (or Cool/other as selected) if HDD is not suitable;\nAzure Blob Archive, or Cool/other as selected;"
+  },
+  {
+    "Workload type": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+    "Expected avg file size (used for Blob IO transaction calculations baseline)": "1 MB to 100 MB (typical 10 MB)",
+    "Files per directory (avg) (used for Blob IO transaction calculations baseline)": "100 to 1,000 (typical 500)",
+    "Directory depth (used for Blob IO transaction calculations baseline)": "2 to 6 (typical 4)",
+    "File churn (used for Blob IO transaction calculations baseline)": "Low",
+    "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+    "Azure Blob access tier tendency": "Archive (default), or as selected by the user",
+    "Source protocol": "NFS 3, NFS 4.1",
+    "Prioritised Target SKU/Recommended": "First Azure Blob (Cold) if NFS v3 and then Azure Files Premium SSD for NFS 4.1; \nAzure Blob Archive, or Cool/other as selected;"
+  },
+
   {
     "Workload type": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
     "Expected avg file size (used for Blob IO transaction calculations baseline)": "1 MB to 100 MB (typical 10 MB)",
@@ -349,7 +570,7 @@
     "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
     "Azure Blob access tier tendency": "Archive (default), or as selected by the user",
     "Source protocol": "SMB and NFS",
-    "Prioritised Target SKU/Recommended": "Azure Files -Standard- HDD for all SMB versions;\nAzure Blob (Cold) if v3 then Azure Files Premium SSD"
+    "Prioritised Target SKU/Recommended": "Azure Files -Standard- HDD for all SMB versions then Azure Blob (Cold) if selected;\nAzure Blob (Cold) if NFS v3 and then then Azure Files Premium SSD if none other available or suitable"
   },
   {
     "Workload type": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
@@ -371,7 +592,7 @@
     "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
     "Azure Blob access tier tendency": "Archive (default), or as selected by the user",
     "Source protocol": "NFS and S3",
-    "Prioritised Target SKU/Recommended": "AzBlob Cold (or Cool/other as selected) for NFS v3 then AzFiles SSD; \nAzure Blob Archive, or Cool/other as selected;"
+    "Prioritised Target SKU/Recommended": "AzBlob Cold (or Cool/other as selected) for NFS v3 then AzFiles SSD; \nAzure Blob Archive, or Cool/other as selected for S3;"
   },
   {
     "Workload type": "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
@@ -382,6 +603,6 @@
     "Default Azure Files media tendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
     "Azure Blob access tier tendency": "Archive (default), or as selected by the user",
     "Source protocol": "SMB NFS and S3",
-    "Prioritised Target SKU/Recommended": "Azure Files Standard HDD for all SMB version;\nAzBlob Cold (or other as selected) for NFS v3, then Azure Files Premium SSD;\nAzure Blob Archive or Cool/other as selected;"
+    "Prioritised Target SKU/Recommended": "Azure Files Standard HDD for all SMB version;\nAzBlob Cold (or other as selected) for NFS v3, then Azure Files Premium SSD;\nAzure Blob Archive or Cool/other as selected for S3;"
   }
 ]

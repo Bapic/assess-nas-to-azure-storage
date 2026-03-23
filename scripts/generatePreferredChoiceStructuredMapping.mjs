@@ -17,8 +17,14 @@ const targetPath = path.join(
 
 const protocolMap = {
   "SMB 2.x, 3.x": ["smb_v2", "smb_v3"],
+  "SMB 2.x": ["smb_v2"],
+  "SMB 3.x": ["smb_v3"],
+  "SMB 2.x, SMB 3.x": ["smb_v2", "smb_v3"],
   SMB: ["smb_v2", "smb_v3"],
   "NFS 3, 4.1": ["nfs_v3", "nfs_v41"],
+  "NFS 3": ["nfs_v3"],
+  "NFS 4.1": ["nfs_v41"],
+  "NFS 3, NFS 4.1": ["nfs_v3", "nfs_v41"],
   NFS: ["nfs_v3", "nfs_v41"],
   S3: ["s3"],
   "SMB and NFS": ["smb_v2", "smb_v3", "nfs_v3", "nfs_v41"],
@@ -35,10 +41,47 @@ const protocolKeyToLabel = {
 };
 
 function normalizeProtocolLabel(label) {
-  return String(label ?? "")
+  const normalized = String(label ?? "")
     .trim()
     .replace(/\s+/g, " ")
     .replace(/^SMB NFS and S3$/i, "SMB, NFS and S3");
+
+  if (/^SMB 2\.x\s*,\s*SMB 3\.x$/i.test(normalized)) {
+    return "SMB 2.x, 3.x";
+  }
+
+  if (/^NFS 3\s*,\s*NFS 4\.1$/i.test(normalized)) {
+    return "NFS 3, 4.1";
+  }
+
+  return normalized;
+}
+
+function inferPreferredFilesOutcomeId({ supportsFiles, filesMediaTendency, recommendationText }) {
+  if (!supportsFiles) return null;
+
+  const tendency = String(filesMediaTendency ?? "").toLowerCase();
+  const recommendation = String(recommendationText ?? "").toLowerCase();
+
+  if (/standard\s*[- ]?hdd|files-standard-hdd/.test(recommendation)) {
+    return "files-standard-hdd";
+  }
+  if (/premium\s*[- ]?ssd|files-premium-ssd/.test(recommendation)) {
+    return "files-premium-ssd";
+  }
+
+  // Handle common phrasing: HDD by default, SSD as optional upgrade path.
+  if (/(hdd).*(by default)/.test(tendency)) {
+    return "files-standard-hdd";
+  }
+  if (/(ssd).*(by default)/.test(tendency)) {
+    return "files-premium-ssd";
+  }
+
+  if (/hdd/.test(tendency)) return "files-standard-hdd";
+  if (/ssd/.test(tendency)) return "files-premium-ssd";
+
+  return "files-standard-hdd";
 }
 
 function generateStructuredRows(rawRows) {
@@ -57,9 +100,11 @@ function generateStructuredRows(rawRows) {
     const filesMediaTendency = String(row["Default Azure Files media tendency"] ?? "");
     const blobTierTendency = String(row["Azure Blob access tier tendency"] ?? "");
 
-    const preferredFilesOutcomeId = supportsFiles
-      ? (/ssd/i.test(filesMediaTendency) ? "files-premium-ssd" : "files-standard-hdd")
-      : null;
+    const preferredFilesOutcomeId = inferPreferredFilesOutcomeId({
+      supportsFiles,
+      filesMediaTendency,
+      recommendationText: row["Prioritised Target SKU/Recommended"],
+    });
 
     const preferredBlobOutcomeId = supportsBlob
       ? (/archive/i.test(blobTierTendency) ? "blob-archive" : "blob-hot")

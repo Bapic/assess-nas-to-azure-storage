@@ -412,7 +412,9 @@ function getCanonicalProtocolLabel(values) {
   const hasNfsV3 = normalizedValues.includes("nfs_v3");
   const hasNfsV41 = normalizedValues.includes("nfs_v41");
   const hasNfs = hasNfsV3 || hasNfsV41;
-  const hasSmb = normalizedValues.includes("smb_v2") || normalizedValues.includes("smb_v3");
+  const hasSmbV2 = normalizedValues.includes("smb_v2");
+  const hasSmbV3 = normalizedValues.includes("smb_v3");
+  const hasSmb = hasSmbV2 || hasSmbV3;
 
   if (hasSmb && hasNfs && hasS3) return "SMB, NFS and S3";
   if (hasSmb && hasNfs) return "SMB and NFS";
@@ -421,11 +423,34 @@ function getCanonicalProtocolLabel(values) {
   if (hasS3) return "S3";
   if (hasNfsV3 && hasNfsV41) return "NFS 3, 4.1";
   if (hasNfs) return "NFS";
-  if (hasSmb) return "SMB 2.x, 3.x";
+  if (hasSmbV2 && hasSmbV3) return "SMB 2.x, 3.x";
+  if (hasSmbV2) return "SMB 2.x";
+  if (hasSmbV3) return "SMB 3.x";
   return "";
 }
 
 function getCanonicalProtocolKey(values) {
+  const normalizedValues = Array.isArray(values)
+    ? values.map((value) => String(value).toLowerCase())
+    : [String(values ?? "").toLowerCase()];
+
+  const hasSmbV2 = normalizedValues.includes("smb_v2");
+  const hasSmbV3 = normalizedValues.includes("smb_v3");
+  const hasNfsV3 = normalizedValues.includes("nfs_v3");
+  const hasNfsV41 = normalizedValues.includes("nfs_v41");
+  const hasS3 = normalizedValues.includes("s3");
+
+  const canonicalValues = [];
+  if (hasSmbV2) canonicalValues.push("smb_v2");
+  if (hasSmbV3) canonicalValues.push("smb_v3");
+  if (hasNfsV3) canonicalValues.push("nfs_v3");
+  if (hasNfsV41) canonicalValues.push("nfs_v41");
+  if (hasS3) canonicalValues.push("s3");
+
+  return [...new Set(canonicalValues)].sort().join("+");
+}
+
+function getLegacyProtocolKey(values) {
   const normalizedValues = Array.isArray(values)
     ? values.map((value) => String(value).toLowerCase())
     : [String(values ?? "").toLowerCase()];
@@ -455,7 +480,10 @@ function findPreferredChoiceRow(answers) {
   const row = preferredChoiceStructuredMappings.find((item) =>
     item.workloadType === workloadType
     && item.sourceProtocolKey === canonicalProtocolKey
-  ) ?? null;
+  ) ?? preferredChoiceStructuredMappings.find((item) => {
+    const legacyProtocolKey = getLegacyProtocolKey(answers?.sourceProtocol);
+    return item.workloadType === workloadType && item.sourceProtocolKey === legacyProtocolKey;
+  }) ?? null;
 
   return { row, canonicalProtocol, canonicalProtocolKey };
 }

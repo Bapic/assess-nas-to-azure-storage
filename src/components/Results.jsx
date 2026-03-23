@@ -68,6 +68,50 @@ function getBestOutcomeByRank(candidates, rankMap) {
   });
 }
 
+function getReadinessPriority(readinessState) {
+  if (readinessState === "Ready") return 3;
+  if (readinessState === "Ready with Condition") return 2;
+  return 1;
+}
+
+function getBestOutcomeByReadinessThenRank(candidates, rankMap, readinessByOutcomeId) {
+  if (!candidates || candidates.length === 0) return null;
+
+  return candidates.reduce((best, current) => {
+    const bestReadiness = readinessByOutcomeId.get(best.id)?.readinessState ?? "Not Ready";
+    const currentReadiness = readinessByOutcomeId.get(current.id)?.readinessState ?? "Not Ready";
+    const bestReadinessScore = getReadinessPriority(bestReadiness);
+    const currentReadinessScore = getReadinessPriority(currentReadiness);
+
+    if (currentReadinessScore !== bestReadinessScore) {
+      return currentReadinessScore > bestReadinessScore ? current : best;
+    }
+
+    const bestRank = rankMap[best.id] ?? -1;
+    const currentRank = rankMap[current.id] ?? -1;
+    return currentRank > bestRank ? current : best;
+  });
+}
+
+function getFilesOutcomeByLowerSkuEscalation(candidates, rankMap, readinessByOutcomeId) {
+  if (!candidates || candidates.length === 0) return null;
+
+  // Lower rank means lower SKU (HDD before SSD).
+  const sortedByLowerSku = [...candidates].sort((a, b) => {
+    const aRank = rankMap[a.id] ?? Number.MAX_SAFE_INTEGER;
+    const bRank = rankMap[b.id] ?? Number.MAX_SAFE_INTEGER;
+    return aRank - bRank;
+  });
+
+  // Start from lower SKU and escalate only when it is Not Ready.
+  const firstReadyOrConditional = sortedByLowerSku.find((outcome) => {
+    const readinessState = readinessByOutcomeId.get(outcome.id)?.readinessState ?? "Not Ready";
+    return readinessState !== "Not Ready";
+  });
+
+  return firstReadyOrConditional ?? sortedByLowerSku[0];
+}
+
 function formatMetricValue(value) {
   return Number.isFinite(value) ? value.toLocaleString("en-US") : "N/A";
 }
@@ -399,6 +443,7 @@ function getFilesRecommendationReasons({
   bestFilesOutcome,
   eligibleFilesOutcomes,
   preferredChoiceOverrideApplies,
+  preferLowerSkuFirst = false,
   filesSkuRegionAdjustment,
   filesPerformanceEligibility,
   filesSkuLabelMap,
@@ -509,6 +554,10 @@ function getFilesRecommendationReasons({
     if (preferredChoiceOverrideApplies) {
       reasons.push(
         "Both Azure Files SKUs are suitable in this scenario; Track B applies preferred-choice mapping, so preferred SKU selection prevails and Premium SSD > Standard HDD precedence is not applied."
+      );
+    } else if (preferLowerSkuFirst) {
+      reasons.push(
+        "Multiple Azure Files SKUs are suitable. Track B starts from lower SKU (Standard HDD) and escalates to Premium SSD only when the lower SKU is Not Ready for current performance/suitability checks."
       );
     } else {
       reasons.push(
@@ -722,8 +771,33 @@ export default function Results({
   const preferredFilesOutcome = trackBPreferredByService?.files
     ? outcomeById.get(trackBPreferredByService.files)
     : null;
-  const trackBBestBlobOutcome = preferredBlobOutcome ?? trackBFallbackBlobOutcome;
-  const trackBBestFilesOutcome = preferredFilesOutcome ?? trackBFallbackFilesOutcome;
+  const trackBMultipleFilesEligible = trackBEligibleFilesOutcomes.length > 1;
+  const trackBPreferredSsdOverrideApplies =
+    trackBMultipleFilesEligible
+    && preferredFilesOutcome?.id === "files-premium-ssd"
+    && trackBEligibleFilesOutcomes.some((outcome) => outcome.id === "files-premium-ssd");
+  const trackBRecommendedBlobOutcome = getBestOutcomeByReadinessThenRank(
+    trackBEligibleBlobOutcomes,
+    blobOutcomeRank,
+    trackBReadinessByOutcomeId
+  );
+  const trackBRecommendedFilesOutcome = getBestOutcomeByReadinessThenRank(
+    trackBEligibleFilesOutcomes,
+    filesOutcomeRank,
+    trackBReadinessByOutcomeId
+  );
+  const trackBRecommendedFilesOutcomeLowerFirst = getFilesOutcomeByLowerSkuEscalation(
+    trackBEligibleFilesOutcomes,
+    filesOutcomeRank,
+    trackBReadinessByOutcomeId
+  );
+  const trackBBestBlobOutcome = trackBRecommendedBlobOutcome ?? preferredBlobOutcome ?? trackBFallbackBlobOutcome;
+  const trackBBestFilesOutcome = trackBPreferredSsdOverrideApplies
+    ? preferredFilesOutcome
+    : trackBRecommendedFilesOutcomeLowerFirst
+      ?? trackBRecommendedFilesOutcome
+      ?? preferredFilesOutcome
+      ?? trackBFallbackFilesOutcome;
   const trackBBestBlobReadiness = trackBBestBlobOutcome
     ? trackBReadinessByOutcomeId.get(trackBBestBlobOutcome.id)
     : null;
@@ -776,8 +850,8 @@ export default function Results({
         answers,
         bestFilesOutcome: trackBBestFilesOutcome,
         eligibleFilesOutcomes: trackBEligibleFilesOutcomes,
-        preferredChoiceOverrideApplies:
-          Boolean(trackBPreferredByService?.files) && trackBEligibleFilesOutcomes.length > 1,
+        preferredChoiceOverrideApplies: trackBPreferredSsdOverrideApplies,
+        preferLowerSkuFirst: !trackBPreferredSsdOverrideApplies,
         filesSkuRegionAdjustment,
         filesPerformanceEligibility,
         filesSkuLabelMap,
@@ -800,7 +874,7 @@ export default function Results({
     if (trackBMatchedPreferredToTrackA?.blob === true) {
       trackBBlobRecommendationReasons.unshift("Track A and preferred-choice mapping are aligned for Blob recommendation.");
     } else if (trackBMatchedPreferredToTrackA?.blob === false) {
-      trackBBlobRecommendationReasons.unshift("Track B mismatch detected against Track A for Blob; preferred-choice recommendation prevails as requested.");
+      trackBBlobRecommendationReasons.unshift("Track B mismatch detected against Track A for Blob; recommended outcome is now selected by readiness priority (Ready, then Ready with Condition), while preferred outcome remains listed in Track B SKU details.");
     }
   }
 
@@ -808,8 +882,14 @@ export default function Results({
     if (trackBMatchedPreferredToTrackA?.files === true) {
       trackBFilesRecommendationReasons.unshift("Track A and preferred-choice mapping are aligned for Azure Files recommendation.");
     } else if (trackBMatchedPreferredToTrackA?.files === false) {
-      trackBFilesRecommendationReasons.unshift("Track B mismatch detected against Track A for Azure Files; preferred-choice recommendation prevails as requested.");
+      trackBFilesRecommendationReasons.unshift("Track B mismatch detected against Track A for Azure Files; recommended outcome is now selected by readiness priority (Ready, then Ready with Condition), while preferred outcome remains listed in Track B SKU details.");
     }
+  }
+
+  if (trackBPreferredSsdOverrideApplies) {
+    trackBFilesRecommendationReasons.unshift(
+      "Preferred-choice mapping explicitly recommends Azure Files Premium SSD for this workload/protocol combination. Since multiple Azure Files SKUs are eligible, Premium SSD is selected in Track B Recommended section."
+    );
   }
 
   const trackABlobRecommendationReasonsFull = mergeReasonLists(
@@ -1057,7 +1137,7 @@ export default function Results({
                   const effectiveRedundancy = redundancyAdjustment?.applied ?? answers?.redundancy;
                   const outcomeRedundancy =
                     redundancyLabelMap[effectiveRedundancy] ?? String(effectiveRedundancy ?? "N/A");
-                  const readiness = trackBReadinessByOutcomeId.get(outcome.id);
+                  const readiness = readinessByOutcomeId.get(outcome.id);
                   const readinessState = readiness?.readinessState ?? "Not Ready";
                   const readinessReasons = readiness?.readinessReasons ?? ["No readiness details available."];
 
@@ -1203,7 +1283,7 @@ export default function Results({
                   const effectiveRedundancy = redundancyAdjustment?.applied ?? answers?.redundancy;
                   const outcomeRedundancy =
                     redundancyLabelMap[effectiveRedundancy] ?? String(effectiveRedundancy ?? "N/A");
-                  const readiness = readinessByOutcomeId.get(outcome.id);
+                  const readiness = trackBReadinessByOutcomeId.get(outcome.id);
                   const readinessState = readiness?.readinessState ?? "Not Ready";
                   const readinessReasons = readiness?.readinessReasons ?? ["No readiness details available."];
 
