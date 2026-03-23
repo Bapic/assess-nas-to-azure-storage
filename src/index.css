@@ -92,6 +92,29 @@ body {
   width: 100%;
 }
 
+.global-notice-banner {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #7c2d12;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  .global-notice-banner {
+    background: #3a2a05;
+    border-color: #f59e0b;
+    color: #fde68a;
+    box-shadow: 0 2px 10px rgba(245, 158, 11, 0.2);
+  }
+}
+
 .app-header {
   text-align: center;
   margin-bottom: 2rem;

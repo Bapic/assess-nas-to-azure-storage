@@ -22,6 +22,10 @@ function App() {
 
   return (
     <div className="app">
+      <div className="global-notice-banner" role="status" aria-live="polite">
+        ANF implementation is not yet added
+      </div>
+
       <header className="app-header">
         <h1>Assess NAS Sources to Azure Storage</h1>
         <p>Answer a few questions and we'll find the best options for you.</p>
