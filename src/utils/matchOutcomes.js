@@ -283,6 +283,7 @@ export function getEligibleOutcomes(outcomes, answers) {
   const selectedRegion = answers.region;
   const selectedServices = answers.targetService; // array | undefined
   const selectedRedundancy = answers.redundancy;   // string | undefined
+  const sourceNas = String(answers?.nas ?? "").toLowerCase();
   const sourceProtocolValues = Array.isArray(answers?.sourceProtocol)
     ? answers.sourceProtocol.map((value) => String(value).toLowerCase())
     : [String(answers?.sourceProtocol ?? "").toLowerCase()];
@@ -297,16 +298,24 @@ export function getEligibleOutcomes(outcomes, answers) {
   const sourceHasNfsV41 =
     sourceProtocolValues.includes("nfs_v41") || sourceProtocolJoined.includes("nfs_v41");
   const sourceHasNfs = sourceHasNfsV3 || sourceHasNfsV41 || sourceProtocolJoined.includes("nfs");
+  const isNetAppOrDellSource = sourceNas === "netapp" || sourceNas === "dell";
   const blobProtocolSupported = sourceHasS3 || sourceHasNfsV3;
   const filesProtocolSupported = sourceHasSmb || sourceHasNfsV41;
   const selectedServicesList = Array.isArray(selectedServices) ? selectedServices : [];
   const filesSelected = selectedServicesList.includes("files");
   const blobsSelected = selectedServicesList.includes("blobs");
+  const filesCrossAssessmentEnabled =
+    isNetAppOrDellSource && (sourceHasS3 || sourceHasNfsV3);
   const autoIncludeBlobForProtocolPriority =
     filesSelected && blobProtocolSupported && !blobsSelected;
+  const autoIncludeFilesForCrossAssessment =
+    blobsSelected && filesCrossAssessmentEnabled && !filesSelected;
   const effectiveServices = autoIncludeBlobForProtocolPriority
     ? [...new Set([...selectedServicesList, "blobs"])]
     : selectedServicesList;
+  const effectiveServicesWithFiles = autoIncludeFilesForCrossAssessment
+    ? [...new Set([...effectiveServices, "files"])]
+    : effectiveServices;
   const forcedBlobAccessFrequency = autoIncludeBlobForProtocolPriority ? "hot" : null;
   const blobTierRegionAdjustment = getBlobTierRegionAdjustment(answers);
   const filesSkuRegionAdjustment = getFilesSkuRegionAdjustment(answers);
@@ -314,8 +323,8 @@ export function getEligibleOutcomes(outcomes, answers) {
 
   // Build the set of outcome IDs allowed by the selected services
   const allowedByService =
-    effectiveServices.length > 0
-      ? new Set(effectiveServices.flatMap((svc) => serviceOutcomeMap[svc] ?? []))
+    effectiveServicesWithFiles.length > 0
+      ? new Set(effectiveServicesWithFiles.flatMap((svc) => serviceOutcomeMap[svc] ?? []))
       : null;
 
   return outcomes.filter((outcome) => {
@@ -346,7 +355,8 @@ export function getEligibleOutcomes(outcomes, answers) {
     // --- Media type gate (Azure Files outcomes only) ---
     // One or more of files-premium-ssd / files-standard-hdd can be eligible.
     // If selected Files SKU is region-unavailable, fallback to the alternate SKU when possible.
-    // For NFS source protocols, Azure Files Standard HDD is excluded.
+    // For standard NFS assessments, Azure Files Standard HDD is excluded.
+    // NetApp/Dell cross-assessment mode can still evaluate HDD with conditions.
     // Source size/IOPS/throughput also drive Files SKU eligibility.
     {
       const selectedFilesMediaOutcomes = answers.filesMediaType
@@ -355,13 +365,19 @@ export function getEligibleOutcomes(outcomes, answers) {
       const isFilesMediaOutcome = filesOutcomeIds.includes(outcome.id);
 
       // Files protocol policy: assess Files only for SMB or NFS v4.1 source protocol paths.
-      if (isFilesMediaOutcome && !filesProtocolSupported) {
+      if (isFilesMediaOutcome && !(filesProtocolSupported || filesCrossAssessmentEnabled)) {
         return false;
       }
 
       // Azure Files supports NFS v4.1 but not NFS v3. If the source protocol is NFS v3-only,
       // Files outcomes are excluded and Blob Hot is auto-included by service/tier defaults above.
-      if (isFilesMediaOutcome && sourceHasNfsV3 && !sourceHasNfsV41 && !sourceHasSmb) {
+      if (
+        isFilesMediaOutcome
+        && sourceHasNfsV3
+        && !sourceHasNfsV41
+        && !sourceHasSmb
+        && !filesCrossAssessmentEnabled
+      ) {
         return false;
       }
 
@@ -372,7 +388,7 @@ export function getEligibleOutcomes(outcomes, answers) {
         return false;
       }
 
-      if (sourceHasNfs && outcome.id === "files-standard-hdd") {
+      if (sourceHasNfs && outcome.id === "files-standard-hdd" && !filesCrossAssessmentEnabled) {
         return false;
       }
 
@@ -495,6 +511,7 @@ function findPreferredChoiceRow(answers) {
 export function getTrackBSelection(outcomes, answers, trackAEligibleOutcomes = []) {
   const trackAOutcomeIds = new Set((trackAEligibleOutcomes ?? []).map((item) => item.id));
   const selectedServices = Array.isArray(answers?.targetService) ? answers.targetService : [];
+  const sourceNas = String(answers?.nas ?? "").toLowerCase();
   const sourceProtocolValues = Array.isArray(answers?.sourceProtocol)
     ? answers.sourceProtocol.map((value) => String(value).toLowerCase())
     : [String(answers?.sourceProtocol ?? "").toLowerCase()];
@@ -505,7 +522,15 @@ export function getTrackBSelection(outcomes, answers, trackAEligibleOutcomes = [
   const effectiveServices = autoIncludeBlobForProtocolPriority
     ? [...new Set([...selectedServices, "blobs"])]
     : selectedServices;
-  const allowedByService = new Set(effectiveServices.flatMap((svc) => serviceOutcomeMap[svc] ?? []));
+  const autoIncludeFilesForS3CrossAssessment =
+    selectedServices.includes("blobs")
+    && !selectedServices.includes("files")
+    && (sourceHasS3 || sourceHasNfsV3)
+    && (sourceNas === "netapp" || sourceNas === "dell");
+  const effectiveServicesWithFiles = autoIncludeFilesForS3CrossAssessment
+    ? [...new Set([...effectiveServices, "files"])]
+    : effectiveServices;
+  const allowedByService = new Set(effectiveServicesWithFiles.flatMap((svc) => serviceOutcomeMap[svc] ?? []));
 
   const { row: preferredRow, canonicalProtocol, canonicalProtocolKey } = findPreferredChoiceRow(answers);
   const preferredOutcomeIds = [

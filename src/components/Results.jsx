@@ -175,6 +175,7 @@ function evaluateOutcomeReadiness({
   blobTierLabelMap,
   filesSkuLabelMap,
   protocolAdaptationMode = false,
+  s3FilesCrossAssessmentMode = false,
 }) {
   if (!allowedByService.has(outcome.id)) return null;
 
@@ -237,7 +238,7 @@ function evaluateOutcomeReadiness({
 
   if (isFilesOutcome) {
     if (!filesProtocolSupported) {
-      if (protocolAdaptationMode) {
+      if (protocolAdaptationMode || s3FilesCrossAssessmentMode) {
         conditions.push(
           "Source protocol is not Azure Files-compatible by default; protocol/application adaptation is required (SMB or NFS v4.1)."
         );
@@ -249,7 +250,7 @@ function evaluateOutcomeReadiness({
     }
 
     if (sourceHasNfsV3 && !sourceHasNfsV41 && !sourceHasSmb) {
-      if (protocolAdaptationMode) {
+      if (protocolAdaptationMode || s3FilesCrossAssessmentMode) {
         conditions.push("NFS v3-only path requires protocol/application adaptation to SMB or NFS v4.1 for Azure Files.");
       } else {
         blockers.push("NFS v3-only protocol path is not supported by Azure Files.");
@@ -269,7 +270,7 @@ function evaluateOutcomeReadiness({
     }
 
     if (sourceHasNfs && outcome.id === "files-standard-hdd") {
-      if (protocolAdaptationMode) {
+      if (protocolAdaptationMode || s3FilesCrossAssessmentMode) {
         conditions.push("Azure Files Standard HDD requires SMB or NFS v4.1 compatible access behavior.");
       } else {
         blockers.push("Azure Files Standard HDD is not supported for NFS protocol paths.");
@@ -484,6 +485,7 @@ function getFilesRecommendationReasons({
   eligibleFilesOutcomes,
   preferredChoiceOverrideApplies,
   preferLowerSkuFirst = false,
+  s3FilesCrossAssessmentMode = false,
   filesSkuRegionAdjustment,
   filesPerformanceEligibility,
   filesSkuLabelMap,
@@ -502,11 +504,17 @@ function getFilesRecommendationReasons({
   const filesPerfMetrics = filesPerformanceEligibility?.metrics ?? {};
   const filesPerfThresholds = filesPerformanceEligibility?.thresholds ?? {};
   const metricsSummary = `${formatMetricValue(filesPerfMetrics.shareSizeGb)} GB, ${formatMetricValue(filesPerfMetrics.iops)} IOPS, ${formatMetricValue(filesPerfMetrics.throughputMibps)} MiB/s`;
+  const s3CrossAssessmentReason = 
+    "NetApp ONTAP AFF and NetApp ONTAP FAS NAS appliances are a File system based architecture that exposes various shares supporting multiple protocols including NFS v3 and S3. Hence NFS v3 and S3 shares are also assessed as another shares against Azure Files and performance and scale targets were applied. In some scenarios, customers can also implement sharding on Azure Files shares to meet scalability requirements across file shares.";
 
   if (!bestFilesOutcome) {
     const reasons = [
       "Azure Files was selected, but no Files SKU is currently eligible after applying protocol, performance/scale, region and redundancy checks.",
     ];
+
+    if (s3FilesCrossAssessmentMode) {
+      reasons.push(s3CrossAssessmentReason);
+    }
 
     if ((sourceHasNfsV3 || sourceHasS3) && !sourceHasNfsV41 && !sourceHasSmb) {
       reasons.push(
@@ -539,6 +547,10 @@ function getFilesRecommendationReasons({
 
   reasons.push("Azure Files was selected as a target service, so Azure Files SKUs were evaluated.");
 
+  if (s3FilesCrossAssessmentMode) {
+    reasons.push(s3CrossAssessmentReason);
+  }
+
   if (filesPerformanceEligibility?.scenario === "both") {
     reasons.push(
       `Source size/IOPS/throughput (${metricsSummary}) are within baseline limits (< ${formatMetricValue(filesPerfThresholds.maxShareSizeGb)} GB, < ${formatMetricValue(filesPerfThresholds.hddMaxIops)} IOPS, < ${formatMetricValue(filesPerfThresholds.hddMaxThroughputMibps)} MiB/s), so both Azure Files Standard HDD and Premium SSD are suitable.`
@@ -553,7 +565,7 @@ function getFilesRecommendationReasons({
     reasons.push(
       `Selected Files SKU ${filesSkuLabelMap[substitutionForBest.requested]} is unavailable in ${answers?.region}; switched to eligible alternative ${filesSkuLabelMap[substitutionForBest.applied]}.`
     );
-  } else if (sourceHasNfs) {
+  } else if (sourceHasNfs && !s3FilesCrossAssessmentMode) {
     reasons.push(
       "NFS source protocol was detected. Azure Files Standard HDD is not supported for NFS, so Premium SSD is selected when eligible."
     );
@@ -567,7 +579,7 @@ function getFilesRecommendationReasons({
     );
   }
 
-  if (sourceHasNfs) {
+  if (sourceHasNfs && !s3FilesCrossAssessmentMode) {
     reasons.push(
       "NFS source protocol detected: Azure Files Standard HDD is excluded, so only Premium SSD remains eligible for Azure Files."
     );
@@ -681,6 +693,7 @@ export default function Results({
 
   const selectedServices = Array.isArray(answers?.targetService) ? answers.targetService : [];
   const selectedRedundancy = answers?.redundancy;
+  const sourceNas = String(answers?.nas ?? "").toLowerCase();
   const filesSelected = selectedServices.includes("files");
   const selectedProtocolValues = Array.isArray(answers?.sourceProtocol)
     ? answers.sourceProtocol.map((value) => String(value).toLowerCase())
@@ -697,23 +710,48 @@ export default function Results({
   const sourceHasNfsV41 = selectedProtocolValues.includes("nfs_v41") || sourceProtocolJoined.includes("nfs_v41");
   const sourceHasNfs = sourceHasNfsV3 || sourceHasNfsV41 || sourceProtocolJoined.includes("nfs");
   const blobsSelected = selectedServices.includes("blobs");
+  const s3FilesCrossAssessmentEnabled =
+    (sourceHasS3 || sourceHasNfsV3) && (sourceNas === "netapp" || sourceNas === "dell");
+  const autoIncludedFilesForS3CrossAssessment =
+    blobsSelected && s3FilesCrossAssessmentEnabled && !filesSelected;
+  const effectiveFilesSelected = filesSelected || autoIncludedFilesForS3CrossAssessment;
   const blobProtocolSupported = sourceHasS3 || sourceHasNfsV3;
-  const filesProtocolSupported = sourceHasSmb || sourceHasNfsV41;
+  const filesProtocolSupported = sourceHasSmb || sourceHasNfsV41 || s3FilesCrossAssessmentEnabled;
   const autoIncludedBlobForProtocolPriority =
     filesSelected && (sourceHasNfsV3 || sourceHasS3) && !blobsSelected;
   const effectiveServices = autoIncludedBlobForProtocolPriority
     ? [...new Set([...selectedServices, "blobs"])]
     : selectedServices;
+  const effectiveServicesWithFiles = autoIncludedFilesForS3CrossAssessment
+    ? [...new Set([...effectiveServices, "files"])]
+    : effectiveServices;
   const effectiveBlobAccessFrequency = answers?.blobAccessFrequency
     ?? (autoIncludedBlobForProtocolPriority ? "hot" : null);
   const effectiveBlobsSelected = blobsSelected || autoIncludedBlobForProtocolPriority;
-  const showRecommendedSection = filesSelected || effectiveBlobsSelected;
+  const showRecommendedSection = effectiveFilesSelected || effectiveBlobsSelected;
   const showTrackB = getTrackBVisibilityFlag();
   const maximizeReadinessAcrossTargets = answers?.maximizeReadinessAcrossTargets !== false;
+  const prioritizeFilesBeforeBlob = sourceNas === "netapp" || sourceNas === "dell";
 
-  const allowedByService = new Set(effectiveServices.flatMap((svc) => serviceOutcomeMap[svc] ?? []));
+  const allowedByService = new Set(effectiveServicesWithFiles.flatMap((svc) => serviceOutcomeMap[svc] ?? []));
   const evaluatedOutcomes = outcomeCatalog.filter((outcome) => allowedByService.has(outcome.id));
   const outcomeById = new Map(outcomeCatalog.map((outcome) => [outcome.id, outcome]));
+
+  function sortOutcomeCards(outcomeList) {
+    if (!prioritizeFilesBeforeBlob) return outcomeList;
+
+    const hasFiles = outcomeList.some((item) => filesOutcomeSet.has(item.id));
+    const hasBlob = outcomeList.some((item) => blobOutcomeSet.has(item.id));
+    if (!hasFiles || !hasBlob) return outcomeList;
+
+    return [...outcomeList].sort((a, b) => {
+      const aOrder = filesOutcomeSet.has(a.id) ? 0 : blobOutcomeSet.has(a.id) ? 1 : 2;
+      const bOrder = filesOutcomeSet.has(b.id) ? 0 : blobOutcomeSet.has(b.id) ? 1 : 2;
+      return aOrder - bOrder;
+    });
+  }
+
+  const shouldRenderFilesFirst = prioritizeFilesBeforeBlob && effectiveFilesSelected && effectiveBlobsSelected;
 
   const selectedFilesMediaOutcomes = answers?.filesMediaType
     ? filesSkuRegionAdjustment?.appliedOutcomeIds ?? toFilesOutcomeIds(answers.filesMediaType)
@@ -752,6 +790,7 @@ export default function Results({
         redundancyLabelMap,
         blobTierLabelMap,
         filesSkuLabelMap,
+        s3FilesCrossAssessmentMode: s3FilesCrossAssessmentEnabled && filesOutcomeSet.has(outcome.id),
       });
       return [outcome.id, readiness];
     })
@@ -807,6 +846,7 @@ export default function Results({
         redundancyLabelMap,
         blobTierLabelMap,
         filesSkuLabelMap,
+        s3FilesCrossAssessmentMode: s3FilesCrossAssessmentEnabled && filesOutcomeSet.has(outcome.id),
       });
       return [outcome.id, readiness];
     })
@@ -816,6 +856,9 @@ export default function Results({
     const readiness = trackBReadinessByOutcomeId.get(outcome.id);
     return readiness && readiness.readinessState !== "Not Ready";
   });
+
+  const orderedEvaluatedOutcomes = sortOutcomeCards(evaluatedOutcomes);
+  const orderedTrackBEvaluatedOutcomes = sortOutcomeCards(trackBEvaluatedOutcomes);
 
   const trackBEligibleBlobOutcomes = trackBEligibleOutcomes.filter((outcome) => blobOutcomeSet.has(outcome.id));
   const trackBEligibleFilesOutcomes = trackBEligibleOutcomes.filter((outcome) => filesOutcomeSet.has(outcome.id));
@@ -874,13 +917,14 @@ export default function Results({
       })
     : [];
 
-  const filesRecommendationReasons = filesSelected
+  const filesRecommendationReasons = effectiveFilesSelected
     ? getFilesRecommendationReasons({
         answers,
         bestFilesOutcome,
         eligibleFilesOutcomes,
         preferredChoiceOverrideApplies: false,
         preferLowerSkuFirst: true,
+        s3FilesCrossAssessmentMode: s3FilesCrossAssessmentEnabled,
         filesSkuRegionAdjustment,
         filesPerformanceEligibility,
         filesSkuLabelMap,
@@ -902,13 +946,14 @@ export default function Results({
       })
     : [];
 
-  const trackBFilesRecommendationReasons = filesSelected
+  const trackBFilesRecommendationReasons = effectiveFilesSelected
     ? getFilesRecommendationReasons({
         answers,
         bestFilesOutcome: trackBBestFilesOutcome,
         eligibleFilesOutcomes: trackBEligibleFilesOutcomes,
         preferredChoiceOverrideApplies: trackBPreferredSsdOverrideApplies,
         preferLowerSkuFirst: !trackBPreferredSsdOverrideApplies,
+        s3FilesCrossAssessmentMode: s3FilesCrossAssessmentEnabled,
         filesSkuRegionAdjustment,
         filesPerformanceEligibility,
         filesSkuLabelMap,
@@ -920,11 +965,11 @@ export default function Results({
   if (trackBPreferredRow) {
     const matrixContext = `Preferred-choice matrix matched Workload type \"${trackBPreferredRow.workloadType}\" + Source protocol \"${trackBCanonicalProtocol || trackBPreferredRow.sourceProtocolLabel}\".`;
     if (effectiveBlobsSelected) trackBBlobRecommendationReasons.unshift(matrixContext);
-    if (filesSelected) trackBFilesRecommendationReasons.unshift(matrixContext);
+    if (effectiveFilesSelected) trackBFilesRecommendationReasons.unshift(matrixContext);
   } else {
     const fallbackContext = "No preferred-choice matrix row matched this workload/protocol combination, so Track B fell back to Track A suitability logic.";
     if (effectiveBlobsSelected) trackBBlobRecommendationReasons.unshift(fallbackContext);
-    if (filesSelected) trackBFilesRecommendationReasons.unshift(fallbackContext);
+    if (effectiveFilesSelected) trackBFilesRecommendationReasons.unshift(fallbackContext);
   }
 
   if (trackBPreferredByService?.blob && bestBlobOutcome?.id) {
@@ -949,25 +994,19 @@ export default function Results({
     );
   }
 
-  const trackABlobRecommendationReasonsFull = mergeReasonLists(
-    blobRecommendationReasons,
-    bestBlobReadiness?.readinessReasons ?? []
-  );
-  const trackBBlobRecommendationReasonsFull = mergeReasonLists(
-    trackBBlobRecommendationReasons,
-    trackBBestBlobReadiness?.readinessReasons ?? []
-  );
+  const trackABlobRecommendationReasonsFull = blobRecommendationReasons;
+  const trackBBlobRecommendationReasonsFull = trackBBlobRecommendationReasons;
   const filesFallbackPairs = (filesSkuRegionAdjustment?.substitutions ?? [])
     .filter((item) => item.applied)
     .map((item) => `${filesSkuLabelMap[item.requested]} → ${filesSkuLabelMap[item.applied]}`);
   const filesFallbackOutcomeSet = new Set(filesSkuRegionAdjustment?.fallbackOutcomeIds ?? []);
   const hasFilesFallbackInResults = evaluatedOutcomes.some((outcome) => filesFallbackOutcomeSet.has(outcome.id));
   const filesServiceUnavailableInRegion =
-    filesSelected
+    effectiveFilesSelected
     && !!filesPv2RegionAvailability
     && !filesPv2RegionAvailability.serviceAvailable;
   const filesPerformanceOutOfBounds =
-    filesSelected && filesPerformanceEligibility?.scenario === "none";
+    effectiveFilesSelected && filesPerformanceEligibility?.scenario === "none";
   const hasRedundancyDowngrade =
     !!selectedRedundancy
     && evaluatedOutcomes.some((outcome) => {
@@ -988,7 +1027,7 @@ export default function Results({
   }
 
   const blobComparisonStatus = effectiveBlobsSelected ? getComparisonStatus("blob") : null;
-  const filesComparisonStatus = filesSelected ? getComparisonStatus("files") : null;
+  const filesComparisonStatus = effectiveFilesSelected ? getComparisonStatus("files") : null;
 
   const allBlobOutcomeCandidates = outcomeCatalog.filter((outcome) => blobOutcomeSet.has(outcome.id));
   const allFilesOutcomeCandidates = outcomeCatalog.filter((outcome) => filesOutcomeSet.has(outcome.id));
@@ -1099,28 +1138,29 @@ export default function Results({
     if (!outcome) return [];
 
     const conditions = [
-      "Maximise readiness across target services is enabled, so this additional cross-service option is included for the same share.",
-      "This additional option is intentionally marked as Ready with Condition and requires validation/remediation before production rollout.",
+      "Readiness maximised is additive: this option is shown alongside the primary recommendation, not as a replacement.",
+      "This option is always presented as Ready with Condition and requires workload/application replatforming or rearchitecture for the alternative Azure service.",
+      "Complete protocol and application suitability fixes, then validate via POC before production migration.",
     ];
 
     if (blobOutcomeSet.has(outcome.id)) {
       conditions.push(
-        "Blob alternative assumes application/workload adaptation for object storage semantics and access patterns."
+        "Blob alternative requires application behavior aligned to object storage semantics and access patterns."
       );
       if (!blobProtocolSupported) {
         conditions.push(
-          "Current source protocol path is not Blob-compatible by default; replatform/rearchitect the workload (or introduce a Blob-compatible access path such as S3/NFS v3) to adopt this option."
+          "Current source protocol path is not Blob-compatible by default; adopt a Blob-compatible path (S3/NFS v3) or replatform/rearchitect accordingly."
         );
       }
     }
 
     if (filesOutcomeSet.has(outcome.id)) {
       conditions.push(
-        "Azure Files alternative assumes SMB or NFS v4.1 compatible client/application access behavior."
+        "Azure Files alternative requires SMB or NFS v4.1 compatible client/application behavior."
       );
       if (!filesProtocolSupported) {
         conditions.push(
-          "Current source protocol path is not Azure Files-compatible by default; update application/client protocol behavior to SMB/NFS v4.1 before adopting this option."
+          "Current source protocol path is not Azure Files-compatible by default; update application/client behavior to SMB/NFS v4.1 before adoption."
         );
       }
       if (sourceHasNfsV3 && !sourceHasNfsV41 && !sourceHasSmb) {
@@ -1146,6 +1186,55 @@ export default function Results({
     return mergeReasonLists(conditions, readinessReasons);
   }
 
+  function getAlternativeRecommendationReasons({
+    outcome,
+    trackMode,
+    preferredChoiceOverrideApplies = false,
+  }) {
+    if (!outcome) return [];
+
+    const reasons = [
+      "Included because Maximise readiness across target services is enabled.",
+    ];
+
+    if (blobOutcomeSet.has(outcome.id)) {
+      return mergeReasonLists(
+        reasons,
+        getBlobRecommendationReasons({
+          answers,
+          bestBlobOutcome: outcome,
+          eligibleBlobOutcomes: allBlobOutcomeCandidates,
+          autoIncludedBlobForProtocolPriority,
+          blobTierRegionAdjustment,
+          blobTierLabelMap,
+          redundancyLabelMap,
+          getOutcomeRedundancyAdjustment,
+        })
+      );
+    }
+
+    if (filesOutcomeSet.has(outcome.id)) {
+      return mergeReasonLists(
+        reasons,
+        getFilesRecommendationReasons({
+          answers,
+          bestFilesOutcome: outcome,
+          eligibleFilesOutcomes: allFilesOutcomeCandidates,
+          preferredChoiceOverrideApplies: trackMode === "B" ? preferredChoiceOverrideApplies : false,
+          preferLowerSkuFirst: trackMode === "B" ? !preferredChoiceOverrideApplies : true,
+          s3FilesCrossAssessmentMode: s3FilesCrossAssessmentEnabled,
+          filesSkuRegionAdjustment,
+          filesPerformanceEligibility,
+          filesSkuLabelMap,
+          redundancyLabelMap,
+          getOutcomeRedundancyAdjustment,
+        })
+      );
+    }
+
+    return reasons;
+  }
+
   const alternativeReadinessByOutcomeId = getAlternativeReadinessMap("A", new Set());
   const alternativeTrackAOutcome = maximizeReadinessAcrossTargets
     ? pickAlternativeOutcome({
@@ -1159,6 +1248,12 @@ export default function Results({
     : null;
   const alternativeTrackAConditions = maximizeReadinessAcrossTargets
     ? getAlternativeConditions(alternativeTrackAOutcome, alternativeTrackAReadiness)
+    : [];
+  const alternativeTrackARecommendationReasons = maximizeReadinessAcrossTargets
+    ? getAlternativeRecommendationReasons({
+        outcome: alternativeTrackAOutcome,
+        trackMode: "A",
+      })
     : [];
 
   const alternativeTrackBReadinessByOutcomeId = getAlternativeReadinessMap("B", trackBPreferredOverrideOutcomeIds);
@@ -1174,6 +1269,13 @@ export default function Results({
     : null;
   const alternativeTrackBConditions = maximizeReadinessAcrossTargets
     ? getAlternativeConditions(alternativeTrackBOutcome, alternativeTrackBReadiness)
+    : [];
+  const alternativeTrackBRecommendationReasons = maximizeReadinessAcrossTargets
+    ? getAlternativeRecommendationReasons({
+        outcome: alternativeTrackBOutcome,
+        trackMode: "B",
+        preferredChoiceOverrideApplies: trackBPreferredSsdOverrideApplies,
+      })
     : [];
 
   // Build the list of questions that were actually answered (visible questions only)
@@ -1191,7 +1293,7 @@ export default function Results({
 
   const blobProtocolOutcomeSet = new Set(["blob-hot", "blob-cool", "blob-cold", "blob-archive"]);
   const filesProtocolOutcomeSet = new Set(["files-standard-hdd", "files-premium-ssd"]);
-  const blobSupportedProtocols = ["nfs_v3", "s3"];
+  const blobSupportedProtocols = ["s3", "nfs_v3"];
   const filesSupportedProtocols = ["smb_v2", "smb_v3", "nfs_v41"];
 
   function getSupportedProtocolLabelForOutcome(outcomeId) {
@@ -1201,8 +1303,12 @@ export default function Results({
         ? filesSupportedProtocols
         : selectedProtocolValues;
 
-    const selectedSupported = selectedProtocolValues.filter((value) => supportedValues.includes(value));
-    const valuesToShow = selectedSupported.length > 0 ? selectedSupported : supportedValues;
+    const valuesToShow = blobProtocolOutcomeSet.has(outcomeId)
+      ? supportedValues
+      : (() => {
+          const selectedSupported = selectedProtocolValues.filter((value) => supportedValues.includes(value));
+          return selectedSupported.length > 0 ? selectedSupported : supportedValues;
+        })();
     const labels = valuesToShow.map((value) => protocolLabelMap[value] ?? value);
     return labels.length > 0 ? labels.join(", ") : "N/A";
   }
@@ -1259,6 +1365,12 @@ export default function Results({
         </p>
       )}
 
+      {autoIncludedFilesForS3CrossAssessment && (
+        <p className="region-notice">
+          ⚠ Source protocol includes NFS v3 and/or S3 from NetApp/Dell NAS. Azure Files has been additionally assessed (performance/scale validated) and is presented as Ready with Condition for protocol/application adaptation planning.
+        </p>
+      )}
+
       {/* Methodology callout */}
       <div className="callout-section">
         <ul className="callout-list">
@@ -1281,6 +1393,46 @@ export default function Results({
               <h3 className="recommended-heading">RECOMMENDED</h3>
 
               <div className="recommended-grid">
+                {shouldRenderFilesFirst && effectiveFilesSelected && (
+                  <article className="recommended-card">
+                    <div className="recommended-title-row">
+                      <h4 className="recommended-card-title">Best Eligible Azure Files SKU</h4>
+                      {bestFilesReadiness && (
+                        <span className={getReadinessBadgeClass(s3FilesCrossAssessmentEnabled ? "Ready with Condition" : bestFilesReadiness.readinessState)}>
+                          {s3FilesCrossAssessmentEnabled ? "Ready with Condition" : bestFilesReadiness.readinessState}
+                        </span>
+                      )}
+                    </div>
+                    <p className="recommended-card-value">
+                      {bestFilesOutcome ? bestFilesOutcome.title : "No eligible Azure Files SKU"}
+                    </p>
+                    {bestFilesReadiness && (
+                      <>
+                        <p className="recommended-card-readiness">
+                          Readiness: {s3FilesCrossAssessmentEnabled ? "Ready with Condition" : bestFilesReadiness.readinessState}
+                        </p>
+                        {bestFilesReadiness.readinessReasons?.length > 0 && (
+                          <>
+                            <h5 className="recommended-card-subheading">Readiness reasons</h5>
+                            <ul className="readiness-reasons-list">
+                              {bestFilesReadiness.readinessReasons.map((reason, index) => (
+                                <li key={`files-readiness-${index}`}>{reason}</li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                      </>
+                    )}
+                    <h5 className="recommended-card-subheading">Why was this SKU recommended?</h5>
+                    <ol className="recommended-logic-list">
+                      {filesRecommendationReasons.map((reason) => (
+                        <li key={reason}>{reason}</li>
+                      ))}
+                    </ol>
+                    <button type="button" className="wave-plan-btn">Add to wave plan</button>
+                  </article>
+                )}
+
                 {effectiveBlobsSelected && (
                   <article className="recommended-card">
                     <div className="recommended-title-row">
@@ -1317,16 +1469,17 @@ export default function Results({
                         <li key={reason}>{reason}</li>
                       ))}
                     </ol>
+                    <button type="button" className="wave-plan-btn">Add to wave plan</button>
                   </article>
                 )}
 
-                {filesSelected && (
+                {!shouldRenderFilesFirst && effectiveFilesSelected && (
                   <article className="recommended-card">
                     <div className="recommended-title-row">
                       <h4 className="recommended-card-title">Best Eligible Azure Files SKU</h4>
                       {bestFilesReadiness && (
-                        <span className={getReadinessBadgeClass(bestFilesReadiness.readinessState)}>
-                          {bestFilesReadiness.readinessState}
+                        <span className={getReadinessBadgeClass(s3FilesCrossAssessmentEnabled ? "Ready with Condition" : bestFilesReadiness.readinessState)}>
+                          {s3FilesCrossAssessmentEnabled ? "Ready with Condition" : bestFilesReadiness.readinessState}
                         </span>
                       )}
                     </div>
@@ -1336,7 +1489,7 @@ export default function Results({
                     {bestFilesReadiness && (
                       <>
                         <p className="recommended-card-readiness">
-                          Readiness: {bestFilesReadiness.readinessState}
+                          Readiness: {s3FilesCrossAssessmentEnabled ? "Ready with Condition" : bestFilesReadiness.readinessState}
                         </p>
                         {bestFilesReadiness.readinessReasons?.length > 0 && (
                           <>
@@ -1356,6 +1509,7 @@ export default function Results({
                         <li key={reason}>{reason}</li>
                       ))}
                     </ol>
+                    <button type="button" className="wave-plan-btn">Add to wave plan</button>
                   </article>
                 )}
               </div>
@@ -1376,12 +1530,27 @@ export default function Results({
                   </div>
                   <p className="recommended-card-value">{alternativeTrackAOutcome.title}</p>
                   <p className="recommended-card-readiness">Readiness: Ready with Condition</p>
-                  <h5 className="recommended-card-subheading">Conditions and required actions</h5>
-                  <ul className="readiness-reasons-list">
-                    {alternativeTrackAConditions.map((reason, index) => (
-                      <li key={`tracka-alt-condition-${index}`}>{reason}</li>
+                  {alternativeTrackAConditions.length > 0 && (
+                    <>
+                      <h5 className="recommended-card-subheading">Readiness reasons</h5>
+                      <ul className="readiness-reasons-list">
+                        {alternativeTrackAConditions.map((reason, index) => (
+                          <li key={`tracka-alt-condition-${index}`}>{reason}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  <h5 className="recommended-card-subheading">
+                    {blobOutcomeSet.has(alternativeTrackAOutcome.id)
+                      ? "Why was this access tier recommended?"
+                      : "Why was this SKU recommended?"}
+                  </h5>
+                  <ol className="recommended-logic-list">
+                    {alternativeTrackARecommendationReasons.map((reason, index) => (
+                      <li key={`tracka-alt-reason-${index}`}>{reason}</li>
                     ))}
-                  </ul>
+                  </ol>
+                  <button type="button" className="wave-plan-btn">Add to wave plan</button>
                 </article>
               </div>
             </section>
@@ -1404,7 +1573,7 @@ export default function Results({
                 )}
 
                 <ul className="results-list">
-                  {evaluatedOutcomes.map((outcome) => {
+                  {orderedEvaluatedOutcomes.map((outcome) => {
                     const outcomeTier = getOutcomeTierLabel(outcome);
                     const redundancyAdjustment = getOutcomeRedundancyAdjustment(answers, outcome.id);
                     const effectiveRedundancy = redundancyAdjustment?.applied ?? answers?.redundancy;
@@ -1444,6 +1613,7 @@ export default function Results({
                           ))}
                         </ul>
                         <p className="result-description">{outcome.description}</p>
+                        <button type="button" className="wave-plan-btn">Add to wave plan</button>
                       </li>
                     );
                   })}
@@ -1462,6 +1632,44 @@ export default function Results({
               <h3 className="recommended-heading">RECOMMENDED</h3>
 
               <div className="recommended-grid">
+                {shouldRenderFilesFirst && effectiveFilesSelected && (
+                  <article className="recommended-card">
+                    <div className="recommended-title-row">
+                      <h4 className="recommended-card-title">Best Eligible Azure Files SKU</h4>
+                      {filesComparisonStatus && (
+                        <span className={getComparisonBadgeClass(filesComparisonStatus)}>{filesComparisonStatus}</span>
+                      )}
+                    </div>
+                    <p className="recommended-card-value">
+                      {trackBBestFilesOutcome ? trackBBestFilesOutcome.title : "No eligible Azure Files SKU"}
+                    </p>
+                    {trackBBestFilesReadiness && (
+                      <>
+                        <p className="recommended-card-readiness">
+                          Readiness: {s3FilesCrossAssessmentEnabled ? "Ready with Condition" : trackBBestFilesReadiness.readinessState}
+                        </p>
+                        {trackBBestFilesReadiness.readinessReasons?.length > 0 && (
+                          <>
+                            <h5 className="recommended-card-subheading">Readiness reasons</h5>
+                            <ul className="readiness-reasons-list">
+                              {trackBBestFilesReadiness.readinessReasons.map((reason, index) => (
+                                <li key={`trackb-files-readiness-${index}`}>{reason}</li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                      </>
+                    )}
+                    <h5 className="recommended-card-subheading">Why was this SKU recommended?</h5>
+                    <ol className="recommended-logic-list">
+                      {trackBFilesRecommendationReasons.map((reason, index) => (
+                        <li key={`trackb-files-reason-${index}`}>{reason}</li>
+                      ))}
+                    </ol>
+                    <button type="button" className="wave-plan-btn">Add to wave plan</button>
+                  </article>
+                )}
+
                 {effectiveBlobsSelected && (
                   <article className="recommended-card">
                     <div className="recommended-title-row">
@@ -1496,10 +1704,11 @@ export default function Results({
                         <li key={`trackb-blob-reason-${index}`}>{reason}</li>
                       ))}
                     </ol>
+                    <button type="button" className="wave-plan-btn">Add to wave plan</button>
                   </article>
                 )}
 
-                {filesSelected && (
+                {!shouldRenderFilesFirst && effectiveFilesSelected && (
                   <article className="recommended-card">
                     <div className="recommended-title-row">
                       <h4 className="recommended-card-title">Best Eligible Azure Files SKU</h4>
@@ -1513,7 +1722,7 @@ export default function Results({
                     {trackBBestFilesReadiness && (
                       <>
                         <p className="recommended-card-readiness">
-                          Readiness: {trackBBestFilesReadiness.readinessState}
+                          Readiness: {s3FilesCrossAssessmentEnabled ? "Ready with Condition" : trackBBestFilesReadiness.readinessState}
                         </p>
                         {trackBBestFilesReadiness.readinessReasons?.length > 0 && (
                           <>
@@ -1533,6 +1742,7 @@ export default function Results({
                         <li key={`trackb-files-reason-${index}`}>{reason}</li>
                       ))}
                     </ol>
+                    <button type="button" className="wave-plan-btn">Add to wave plan</button>
                   </article>
                 )}
               </div>
@@ -1553,12 +1763,27 @@ export default function Results({
                   </div>
                   <p className="recommended-card-value">{alternativeTrackBOutcome.title}</p>
                   <p className="recommended-card-readiness">Readiness: Ready with Condition</p>
-                  <h5 className="recommended-card-subheading">Conditions and required actions</h5>
-                  <ul className="readiness-reasons-list">
-                    {alternativeTrackBConditions.map((reason, index) => (
-                      <li key={`trackb-alt-condition-${index}`}>{reason}</li>
+                  {alternativeTrackBConditions.length > 0 && (
+                    <>
+                      <h5 className="recommended-card-subheading">Readiness reasons</h5>
+                      <ul className="readiness-reasons-list">
+                        {alternativeTrackBConditions.map((reason, index) => (
+                          <li key={`trackb-alt-condition-${index}`}>{reason}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  <h5 className="recommended-card-subheading">
+                    {blobOutcomeSet.has(alternativeTrackBOutcome.id)
+                      ? "Why was this access tier recommended?"
+                      : "Why was this SKU recommended?"}
+                  </h5>
+                  <ol className="recommended-logic-list">
+                    {alternativeTrackBRecommendationReasons.map((reason, index) => (
+                      <li key={`trackb-alt-reason-${index}`}>{reason}</li>
                     ))}
-                  </ul>
+                  </ol>
+                  <button type="button" className="wave-plan-btn">Add to wave plan</button>
                 </article>
               </div>
             </section>
@@ -1580,7 +1805,7 @@ export default function Results({
                 )}
 
                 <ul className="results-list">
-                  {trackBEvaluatedOutcomes.map((outcome) => {
+                  {orderedTrackBEvaluatedOutcomes.map((outcome) => {
                     const outcomeTier = getOutcomeTierLabel(outcome);
                     const redundancyAdjustment = getOutcomeRedundancyAdjustment(answers, outcome.id);
                     const effectiveRedundancy = redundancyAdjustment?.applied ?? answers?.redundancy;
@@ -1620,6 +1845,7 @@ export default function Results({
                           ))}
                         </ul>
                         <p className="result-description">{outcome.description}</p>
+                        <button type="button" className="wave-plan-btn">Add to wave plan</button>
                       </li>
                     );
                   })}
