@@ -551,6 +551,12 @@ function getFilesRecommendationReasons({
     reasons.push(s3CrossAssessmentReason);
   }
 
+  if (sourceHasNfs) {
+    reasons.push(
+      "NFS protocol scenario detected: Azure Files recommendation prioritizes Premium SSD over Standard HDD, subject to performance, regional availability, and redundancy compatibility checks."
+    );
+  }
+
   if (filesPerformanceEligibility?.scenario === "both") {
     reasons.push(
       `Source size/IOPS/throughput (${metricsSummary}) are within baseline limits (< ${formatMetricValue(filesPerfThresholds.maxShareSizeGb)} GB, < ${formatMetricValue(filesPerfThresholds.hddMaxIops)} IOPS, < ${formatMetricValue(filesPerfThresholds.hddMaxThroughputMibps)} MiB/s), so both Azure Files Standard HDD and Premium SSD are suitable.`
@@ -732,6 +738,7 @@ export default function Results({
   const showTrackB = getTrackBVisibilityFlag();
   const maximizeReadinessAcrossTargets = answers?.maximizeReadinessAcrossTargets !== false;
   const prioritizeFilesBeforeBlob = sourceNas === "netapp" || sourceNas === "dell";
+  const prioritizePremiumFilesForNfs = sourceHasNfs;
 
   const allowedByService = new Set(effectiveServicesWithFiles.flatMap((svc) => serviceOutcomeMap[svc] ?? []));
   const evaluatedOutcomes = outcomeCatalog.filter((outcome) => allowedByService.has(outcome.id));
@@ -799,11 +806,17 @@ export default function Results({
   const eligibleBlobOutcomes = eligibleOutcomes.filter((outcome) => blobOutcomeSet.has(outcome.id));
   const eligibleFilesOutcomes = eligibleOutcomes.filter((outcome) => filesOutcomeSet.has(outcome.id));
   const bestBlobOutcome = getBestOutcomeByRank(eligibleBlobOutcomes, blobOutcomeRank);
-  const bestFilesOutcome = getFilesOutcomeByLowerSkuEscalation(
-    eligibleFilesOutcomes,
-    filesOutcomeRank,
-    readinessByOutcomeId
-  ) ?? getBestOutcomeByRank(eligibleFilesOutcomes, filesOutcomeRank);
+  const bestFilesOutcome = prioritizePremiumFilesForNfs
+    ? getBestOutcomeByReadinessThenRank(
+        eligibleFilesOutcomes,
+        filesOutcomeRank,
+        readinessByOutcomeId
+      ) ?? getBestOutcomeByRank(eligibleFilesOutcomes, filesOutcomeRank)
+    : getFilesOutcomeByLowerSkuEscalation(
+        eligibleFilesOutcomes,
+        filesOutcomeRank,
+        readinessByOutcomeId
+      ) ?? getBestOutcomeByRank(eligibleFilesOutcomes, filesOutcomeRank);
   const bestBlobReadiness = bestBlobOutcome
     ? readinessByOutcomeId.get(bestBlobOutcome.id)
     : null;
@@ -885,11 +898,13 @@ export default function Results({
     filesOutcomeRank,
     trackBReadinessByOutcomeId
   );
-  const trackBRecommendedFilesOutcomeLowerFirst = getFilesOutcomeByLowerSkuEscalation(
-    trackBEligibleFilesOutcomes,
-    filesOutcomeRank,
-    trackBReadinessByOutcomeId
-  );
+  const trackBRecommendedFilesOutcomeLowerFirst = prioritizePremiumFilesForNfs
+    ? null
+    : getFilesOutcomeByLowerSkuEscalation(
+        trackBEligibleFilesOutcomes,
+        filesOutcomeRank,
+        trackBReadinessByOutcomeId
+      );
   const trackBBestBlobOutcome = trackBRecommendedBlobOutcome ?? preferredBlobOutcome ?? trackBFallbackBlobOutcome;
   const trackBBestFilesOutcome = trackBPreferredSsdOverrideApplies
     ? preferredFilesOutcome
@@ -923,7 +938,7 @@ export default function Results({
         bestFilesOutcome,
         eligibleFilesOutcomes,
         preferredChoiceOverrideApplies: false,
-        preferLowerSkuFirst: true,
+        preferLowerSkuFirst: !prioritizePremiumFilesForNfs,
         s3FilesCrossAssessmentMode: s3FilesCrossAssessmentEnabled,
         filesSkuRegionAdjustment,
         filesPerformanceEligibility,
@@ -952,7 +967,7 @@ export default function Results({
         bestFilesOutcome: trackBBestFilesOutcome,
         eligibleFilesOutcomes: trackBEligibleFilesOutcomes,
         preferredChoiceOverrideApplies: trackBPreferredSsdOverrideApplies,
-        preferLowerSkuFirst: !trackBPreferredSsdOverrideApplies,
+        preferLowerSkuFirst: !trackBPreferredSsdOverrideApplies && !prioritizePremiumFilesForNfs,
         s3FilesCrossAssessmentMode: s3FilesCrossAssessmentEnabled,
         filesSkuRegionAdjustment,
         filesPerformanceEligibility,
