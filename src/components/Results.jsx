@@ -174,6 +174,7 @@ function evaluateOutcomeReadiness({
   redundancyLabelMap,
   blobTierLabelMap,
   filesSkuLabelMap,
+  protocolAdaptationMode = false,
 }) {
   if (!allowedByService.has(outcome.id)) return null;
 
@@ -194,9 +195,15 @@ function evaluateOutcomeReadiness({
     );
 
     if (!blobProtocolSupported) {
-      blockers.push(
-        "Source protocol path is not supported by Azure Blob for this assessment (Blob path supports S3 and NFS v3)."
-      );
+      if (protocolAdaptationMode) {
+        conditions.push(
+          "Source protocol is not Blob-compatible by default; protocol/application adaptation is required (S3 or NFS v3 access path)."
+        );
+      } else {
+        blockers.push(
+          "Source protocol path is not supported by Azure Blob for this assessment (Blob path supports S3 and NFS v3)."
+        );
+      }
     }
 
     if (effectiveBlobAccessFrequency) {
@@ -230,13 +237,23 @@ function evaluateOutcomeReadiness({
 
   if (isFilesOutcome) {
     if (!filesProtocolSupported) {
-      blockers.push(
-        "Source protocol path is not supported by Azure Files for this assessment (Files path supports SMB and NFS v4.1)."
-      );
+      if (protocolAdaptationMode) {
+        conditions.push(
+          "Source protocol is not Azure Files-compatible by default; protocol/application adaptation is required (SMB or NFS v4.1)."
+        );
+      } else {
+        blockers.push(
+          "Source protocol path is not supported by Azure Files for this assessment (Files path supports SMB and NFS v4.1)."
+        );
+      }
     }
 
     if (sourceHasNfsV3 && !sourceHasNfsV41 && !sourceHasSmb) {
-      blockers.push("NFS v3-only protocol path is not supported by Azure Files.");
+      if (protocolAdaptationMode) {
+        conditions.push("NFS v3-only path requires protocol/application adaptation to SMB or NFS v4.1 for Azure Files.");
+      } else {
+        blockers.push("NFS v3-only protocol path is not supported by Azure Files.");
+      }
     }
 
     if (!filesPerformanceEligibility.allowedOutcomeIds.includes(outcome.id)) {
@@ -252,7 +269,11 @@ function evaluateOutcomeReadiness({
     }
 
     if (sourceHasNfs && outcome.id === "files-standard-hdd") {
-      blockers.push("Azure Files Standard HDD is not supported for NFS protocol paths.");
+      if (protocolAdaptationMode) {
+        conditions.push("Azure Files Standard HDD requires SMB or NFS v4.1 compatible access behavior.");
+      } else {
+        blockers.push("Azure Files Standard HDD is not supported for NFS protocol paths.");
+      }
     }
 
     if (
@@ -508,6 +529,9 @@ function getFilesRecommendationReasons({
     : answers?.filesMediaType
       ? [answers.filesMediaType]
       : [];
+  const selectedMediaTypeSet = new Set(selectedMediaTypes);
+  const assessesBothFilesSkusByDefault =
+    selectedMediaTypeSet.has("ssd") && selectedMediaTypeSet.has("hdd");
   const redundancyAdjustment = getOutcomeRedundancyAdjustment(answers, bestFilesOutcome.id);
   const substitutionForBest = (filesSkuRegionAdjustment?.substitutions ?? []).find(
     (sub) => sub.applied === bestFilesOutcome.id
@@ -533,9 +557,13 @@ function getFilesRecommendationReasons({
     reasons.push(
       "NFS source protocol was detected. Azure Files Standard HDD is not supported for NFS, so Premium SSD is selected when eligible."
     );
-  } else if (selectedMediaTypes.length > 0) {
+  } else if (selectedMediaTypes.length > 0 && !assessesBothFilesSkusByDefault) {
     reasons.push(
       `Selected media type filter (${selectedMediaTypes.map((m) => m.toUpperCase()).join(", ")}) allows this SKU to remain eligible.`
+    );
+  } else if (assessesBothFilesSkusByDefault) {
+    reasons.push(
+      "Azure Files media selection was not constrained; both Premium SSD and Standard HDD were assessed by default."
     );
   }
 
@@ -681,6 +709,7 @@ export default function Results({
   const effectiveBlobsSelected = blobsSelected || autoIncludedBlobForProtocolPriority;
   const showRecommendedSection = filesSelected || effectiveBlobsSelected;
   const showTrackB = getTrackBVisibilityFlag();
+  const maximizeReadinessAcrossTargets = answers?.maximizeReadinessAcrossTargets !== false;
 
   const allowedByService = new Set(effectiveServices.flatMap((svc) => serviceOutcomeMap[svc] ?? []));
   const evaluatedOutcomes = outcomeCatalog.filter((outcome) => allowedByService.has(outcome.id));
@@ -961,6 +990,192 @@ export default function Results({
   const blobComparisonStatus = effectiveBlobsSelected ? getComparisonStatus("blob") : null;
   const filesComparisonStatus = filesSelected ? getComparisonStatus("files") : null;
 
+  const allBlobOutcomeCandidates = outcomeCatalog.filter((outcome) => blobOutcomeSet.has(outcome.id));
+  const allFilesOutcomeCandidates = outcomeCatalog.filter((outcome) => filesOutcomeSet.has(outcome.id));
+  const allBlobAndFilesOutcomeIds = new Set([...blobOutcomeIds, ...filesOutcomeIds]);
+
+  function getAlternativeReadinessMap(trackMode, preferredOverrideOutcomeIds) {
+    return new Map(
+      outcomeCatalog
+        .filter((outcome) => allBlobAndFilesOutcomeIds.has(outcome.id))
+        .map((outcome) => {
+          const readiness = evaluateOutcomeReadiness({
+            outcome,
+            answers,
+            trackMode,
+            preferredOverrideOutcomeIds,
+            selectedRegion: answers?.region,
+            selectedRedundancy,
+            allowedByService: allBlobAndFilesOutcomeIds,
+            sourceHasSmb,
+            sourceHasS3,
+            sourceHasNfs,
+            sourceHasNfsV3,
+            sourceHasNfsV41,
+            blobProtocolSupported,
+            filesProtocolSupported,
+            effectiveBlobAccessFrequency: effectiveBlobAccessFrequency ?? "hot",
+            blobTierRegionAdjustment,
+            selectedFilesMediaOutcomes,
+            filesPerformanceEligibility,
+            filesSkuRegionAdjustment,
+            redundancyLabelMap,
+            blobTierLabelMap,
+            filesSkuLabelMap,
+            protocolAdaptationMode: true,
+          });
+          return [outcome.id, readiness];
+        })
+    );
+  }
+
+  function pickBestFilesCandidate(candidates, readinessMap) {
+    return getFilesOutcomeByLowerSkuEscalation(candidates, filesOutcomeRank, readinessMap)
+      ?? getBestOutcomeByReadinessThenRank(candidates, filesOutcomeRank, readinessMap)
+      ?? getBestOutcomeByRank(candidates, filesOutcomeRank);
+  }
+
+  function pickAlternativeOutcome({
+    primaryBlobOutcome,
+    primaryFilesOutcome,
+    readinessMap,
+  }) {
+    const primaryIds = new Set([
+      primaryBlobOutcome?.id,
+      primaryFilesOutcome?.id,
+    ].filter(Boolean));
+
+    const blobAlternatives = allBlobOutcomeCandidates.filter((outcome) => !primaryIds.has(outcome.id));
+    const filesAlternatives = allFilesOutcomeCandidates.filter((outcome) => !primaryIds.has(outcome.id));
+    const viableBlobAlternatives = blobAlternatives.filter((outcome) => {
+      const readinessState = readinessMap.get(outcome.id)?.readinessState ?? "Not Ready";
+      return readinessState !== "Not Ready";
+    });
+    const viableFilesAlternatives = filesAlternatives.filter((outcome) => {
+      const readinessState = readinessMap.get(outcome.id)?.readinessState ?? "Not Ready";
+      return readinessState !== "Not Ready";
+    });
+
+    const preferBlobAlternative = !!primaryFilesOutcome && !primaryBlobOutcome;
+    const preferFilesAlternative = !!primaryBlobOutcome && !primaryFilesOutcome;
+
+    if (preferBlobAlternative) {
+      return getBestOutcomeByReadinessThenRank(viableBlobAlternatives, blobOutcomeRank, readinessMap)
+        ?? getBestOutcomeByRank(viableBlobAlternatives, blobOutcomeRank)
+        ?? null;
+    }
+
+    if (preferFilesAlternative) {
+      return pickBestFilesCandidate(viableFilesAlternatives, readinessMap) ?? null;
+    }
+
+    const bestBlobAlternative = getBestOutcomeByReadinessThenRank(viableBlobAlternatives, blobOutcomeRank, readinessMap)
+      ?? getBestOutcomeByRank(viableBlobAlternatives, blobOutcomeRank)
+      ?? null;
+    const bestFilesAlternative = pickBestFilesCandidate(viableFilesAlternatives, readinessMap) ?? null;
+
+    if (!bestBlobAlternative) return bestFilesAlternative;
+    if (!bestFilesAlternative) return bestBlobAlternative;
+
+    const blobReadinessPriority = getReadinessPriority(
+      readinessMap.get(bestBlobAlternative.id)?.readinessState ?? "Not Ready"
+    );
+    const filesReadinessPriority = getReadinessPriority(
+      readinessMap.get(bestFilesAlternative.id)?.readinessState ?? "Not Ready"
+    );
+
+    if (blobReadinessPriority !== filesReadinessPriority) {
+      return blobReadinessPriority > filesReadinessPriority
+        ? bestBlobAlternative
+        : bestFilesAlternative;
+    }
+
+    const blobRank = blobOutcomeRank[bestBlobAlternative.id] ?? -1;
+    const filesRank = filesOutcomeRank[bestFilesAlternative.id] ?? -1;
+    return blobRank >= filesRank ? bestBlobAlternative : bestFilesAlternative;
+  }
+
+  function getAlternativeConditions(outcome, readiness) {
+    if (!outcome) return [];
+
+    const conditions = [
+      "Maximise readiness across target services is enabled, so this additional cross-service option is included for the same share.",
+      "This additional option is intentionally marked as Ready with Condition and requires validation/remediation before production rollout.",
+    ];
+
+    if (blobOutcomeSet.has(outcome.id)) {
+      conditions.push(
+        "Blob alternative assumes application/workload adaptation for object storage semantics and access patterns."
+      );
+      if (!blobProtocolSupported) {
+        conditions.push(
+          "Current source protocol path is not Blob-compatible by default; replatform/rearchitect the workload (or introduce a Blob-compatible access path such as S3/NFS v3) to adopt this option."
+        );
+      }
+    }
+
+    if (filesOutcomeSet.has(outcome.id)) {
+      conditions.push(
+        "Azure Files alternative assumes SMB or NFS v4.1 compatible client/application access behavior."
+      );
+      if (!filesProtocolSupported) {
+        conditions.push(
+          "Current source protocol path is not Azure Files-compatible by default; update application/client protocol behavior to SMB/NFS v4.1 before adopting this option."
+        );
+      }
+      if (sourceHasNfsV3 && !sourceHasNfsV41 && !sourceHasSmb) {
+        conditions.push(
+          "NFS v3-only workloads require protocol/application changes to SMB or NFS v4.1 to use Azure Files."
+        );
+      }
+    }
+
+    if (answers?.region && !isAvailableInRegion(outcome.id, answers.region)) {
+      conditions.push(
+        `Selected region ${answers.region} does not currently support this option; choose a supported region or adjust your deployment architecture.`
+      );
+    }
+
+    if (selectedRedundancy && !getOutcomeRedundancyAdjustment(answers, outcome.id)) {
+      conditions.push(
+        `Requested redundancy ${redundancyLabelMap[selectedRedundancy] ?? selectedRedundancy} is not supported for this option; select a compatible redundancy profile.`
+      );
+    }
+
+    const readinessReasons = readiness?.readinessReasons ?? [];
+    return mergeReasonLists(conditions, readinessReasons);
+  }
+
+  const alternativeReadinessByOutcomeId = getAlternativeReadinessMap("A", new Set());
+  const alternativeTrackAOutcome = maximizeReadinessAcrossTargets
+    ? pickAlternativeOutcome({
+        primaryBlobOutcome: bestBlobOutcome,
+        primaryFilesOutcome: bestFilesOutcome,
+        readinessMap: alternativeReadinessByOutcomeId,
+      })
+    : null;
+  const alternativeTrackAReadiness = alternativeTrackAOutcome
+    ? alternativeReadinessByOutcomeId.get(alternativeTrackAOutcome.id)
+    : null;
+  const alternativeTrackAConditions = maximizeReadinessAcrossTargets
+    ? getAlternativeConditions(alternativeTrackAOutcome, alternativeTrackAReadiness)
+    : [];
+
+  const alternativeTrackBReadinessByOutcomeId = getAlternativeReadinessMap("B", trackBPreferredOverrideOutcomeIds);
+  const alternativeTrackBOutcome = maximizeReadinessAcrossTargets
+    ? pickAlternativeOutcome({
+        primaryBlobOutcome: trackBBestBlobOutcome,
+        primaryFilesOutcome: trackBBestFilesOutcome,
+        readinessMap: alternativeTrackBReadinessByOutcomeId,
+      })
+    : null;
+  const alternativeTrackBReadiness = alternativeTrackBOutcome
+    ? alternativeTrackBReadinessByOutcomeId.get(alternativeTrackBOutcome.id)
+    : null;
+  const alternativeTrackBConditions = maximizeReadinessAcrossTargets
+    ? getAlternativeConditions(alternativeTrackBOutcome, alternativeTrackBReadiness)
+    : [];
+
   // Build the list of questions that were actually answered (visible questions only)
   const answeredQuestions = (questions ?? []).filter(
     (q) => answers[q.id] !== undefined
@@ -1147,6 +1362,31 @@ export default function Results({
             </section>
           )}
 
+          {maximizeReadinessAcrossTargets && alternativeTrackAOutcome && (
+            <section className="recommended-section" aria-label="Track A additional target option">
+              <h3 className="recommended-heading">ADDITIONAL TARGET OPTION (MAXIMISE READINESS)</h3>
+              <div className="recommended-grid">
+                <article className="recommended-card">
+                  <div className="recommended-title-row">
+                    <h4 className="recommended-card-title">Additional cross-service option</h4>
+                    <span className={getReadinessBadgeClass("Ready with Condition")}>Ready with Condition</span>
+                    <span className="result-badge" aria-label="Readiness maximised">
+                      Readiness maximised
+                    </span>
+                  </div>
+                  <p className="recommended-card-value">{alternativeTrackAOutcome.title}</p>
+                  <p className="recommended-card-readiness">Readiness: Ready with Condition</p>
+                  <h5 className="recommended-card-subheading">Conditions and required actions</h5>
+                  <ul className="readiness-reasons-list">
+                    {alternativeTrackAConditions.map((reason, index) => (
+                      <li key={`tracka-alt-condition-${index}`}>{reason}</li>
+                    ))}
+                  </ul>
+                </article>
+              </div>
+            </section>
+          )}
+
           {evaluatedOutcomes.length === 0 ? (
             <p className="no-results">
               Your answers didn't match any products in our current catalogue. Try
@@ -1295,6 +1535,31 @@ export default function Results({
                     </ol>
                   </article>
                 )}
+              </div>
+            </section>
+          )}
+
+          {maximizeReadinessAcrossTargets && alternativeTrackBOutcome && (
+            <section className="recommended-section" aria-label="Track B additional target option">
+              <h3 className="recommended-heading">ADDITIONAL TARGET OPTION (MAXIMISE READINESS)</h3>
+              <div className="recommended-grid">
+                <article className="recommended-card">
+                  <div className="recommended-title-row">
+                    <h4 className="recommended-card-title">Additional cross-service option</h4>
+                    <span className={getReadinessBadgeClass("Ready with Condition")}>Ready with Condition</span>
+                    <span className="result-badge" aria-label="Readiness maximised">
+                      Readiness maximised
+                    </span>
+                  </div>
+                  <p className="recommended-card-value">{alternativeTrackBOutcome.title}</p>
+                  <p className="recommended-card-readiness">Readiness: Ready with Condition</p>
+                  <h5 className="recommended-card-subheading">Conditions and required actions</h5>
+                  <ul className="readiness-reasons-list">
+                    {alternativeTrackBConditions.map((reason, index) => (
+                      <li key={`trackb-alt-condition-${index}`}>{reason}</li>
+                    ))}
+                  </ul>
+                </article>
               </div>
             </section>
           )}

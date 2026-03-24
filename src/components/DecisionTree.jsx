@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
-const COMMON_QUESTION_IDS = ["region", "nas", "targetService", "redundancy"];
-const SOURCE_DETAILS_QUESTION_IDS = [
+const COMMON_QUESTION_IDS = [
+  "nas",
   "sourceProtocol",
   "workloadType",
   "sourceShareSizeTb",
@@ -10,17 +10,18 @@ const SOURCE_DETAILS_QUESTION_IDS = [
   "comfortFactor",
   "assessmentCriteria",
 ];
-const BLOB_INPUT_QUESTION_IDS = ["blobWorkloadType", "blobAccessFrequency"];
-const FILES_INPUT_QUESTION_IDS = ["filesMediaType"];
+const SOURCE_DETAILS_QUESTION_IDS = [
+  "region",
+  "redundancy",
+  "targetService",
+  "blobAccessFrequency",
+  "filesMediaType",
+];
+const BLOB_INPUT_QUESTION_IDS = [];
+const FILES_INPUT_QUESTION_IDS = [];
 
 const COMMON_DEFAULTS = {
-  region: "eastus",
   nas: "netapp",
-  targetService: ["files"],
-  redundancy: "lrs",
-};
-
-const SOURCE_DETAILS_DEFAULTS = {
   sourceProtocol: ["smb_v3"],
   workloadType: "General-purpose file shares / team shares (incl. user data shares)",
   sourceShareSizeTb: "1024",
@@ -30,13 +31,22 @@ const SOURCE_DETAILS_DEFAULTS = {
   assessmentCriteria: "perf_based",
 };
 
+const SOURCE_DETAILS_DEFAULTS = {
+  region: "eastus",
+  redundancy: "lrs",
+  targetService: ["blobs", "files"],
+  blobAccessFrequency: "hot",
+  filesMediaType: ["ssd", "hdd"],
+  maximizeReadinessAcrossTargets: true,
+};
+
 const BLOB_INPUT_DEFAULTS = {
   blobWorkloadType: "appdata",
   blobAccessFrequency: "hot",
 };
 
 const FILES_INPUT_DEFAULTS = {
-  filesMediaType: ["ssd"],
+  filesMediaType: ["ssd", "hdd"],
 };
 
 /** Pull the first selectable value out of flat or grouped options. */
@@ -118,8 +128,8 @@ export default function DecisionTree({ questions, onComplete }) {
 
   const hasCommonStep = commonQuestions.length === COMMON_QUESTION_IDS.length;
   const hasSourceDetailsStep = sourceDetailsQuestions.length === SOURCE_DETAILS_QUESTION_IDS.length;
-  const hasBlobInputsStep = blobInputQuestions.length === BLOB_INPUT_QUESTION_IDS.length;
-  const hasFilesInputsStep = filesInputQuestions.length === FILES_INPUT_QUESTION_IDS.length;
+  const hasBlobInputsStep = blobInputQuestions.length > 0;
+  const hasFilesInputsStep = filesInputQuestions.length > 0;
 
   const firstDetailIndex = hasCommonStep
     ? Math.max(...commonQuestions.map((q) => questions.findIndex((item) => item.id === q.id))) + 1
@@ -166,12 +176,16 @@ export default function DecisionTree({ questions, onComplete }) {
 
   function getCommonAnswersSnapshot(sourceAnswers) {
     return {
-      region: sourceAnswers.region ?? COMMON_DEFAULTS.region,
       nas: sourceAnswers.nas ?? COMMON_DEFAULTS.nas,
-      targetService: Array.isArray(sourceAnswers.targetService)
-        ? sourceAnswers.targetService
-        : COMMON_DEFAULTS.targetService,
-      redundancy: sourceAnswers.redundancy ?? COMMON_DEFAULTS.redundancy,
+      sourceProtocol: Array.isArray(sourceAnswers.sourceProtocol)
+        ? sourceAnswers.sourceProtocol
+        : COMMON_DEFAULTS.sourceProtocol,
+      workloadType: sourceAnswers.workloadType ?? COMMON_DEFAULTS.workloadType,
+      sourceShareSizeTb: sourceAnswers.sourceShareSizeTb ?? COMMON_DEFAULTS.sourceShareSizeTb,
+      sourceIops: sourceAnswers.sourceIops ?? COMMON_DEFAULTS.sourceIops,
+      sourceThroughputMibps: sourceAnswers.sourceThroughputMibps ?? COMMON_DEFAULTS.sourceThroughputMibps,
+      comfortFactor: sourceAnswers.comfortFactor ?? COMMON_DEFAULTS.comfortFactor,
+      assessmentCriteria: sourceAnswers.assessmentCriteria ?? COMMON_DEFAULTS.assessmentCriteria,
     };
   }
 
@@ -183,25 +197,26 @@ export default function DecisionTree({ questions, onComplete }) {
   }
 
   function getSourceDetailsAnswersSnapshot(sourceAnswers) {
-    const comfortFactorQuestion = sourceDetailsQuestions.find((q) => q.id === "comfortFactor");
-    const sourceProtocolQuestion = sourceDetailsQuestions.find((q) => q.id === "sourceProtocol");
-    const defaultSourceProtocols = sourceProtocolQuestion
-      ? (getDefaultMultiValues(sourceProtocolQuestion).length > 0
-          ? getDefaultMultiValues(sourceProtocolQuestion)
-          : SOURCE_DETAILS_DEFAULTS.sourceProtocol)
-      : SOURCE_DETAILS_DEFAULTS.sourceProtocol;
+    const filesMediaQuestion = sourceDetailsQuestions.find((q) => q.id === "filesMediaType");
+    const defaultFilesMedia = filesMediaQuestion
+      ? (getDefaultMultiValues(filesMediaQuestion).length > 0
+          ? getDefaultMultiValues(filesMediaQuestion)
+          : SOURCE_DETAILS_DEFAULTS.filesMediaType)
+      : SOURCE_DETAILS_DEFAULTS.filesMediaType;
 
     return {
-      sourceProtocol: Array.isArray(sourceAnswers.sourceProtocol)
-        ? sourceAnswers.sourceProtocol
-        : (sourceAnswers.sourceProtocol ? [sourceAnswers.sourceProtocol] : defaultSourceProtocols),
-      workloadType: sourceAnswers.workloadType ?? SOURCE_DETAILS_DEFAULTS.workloadType,
-      sourceShareSizeTb: sourceAnswers.sourceShareSizeTb ?? SOURCE_DETAILS_DEFAULTS.sourceShareSizeTb,
-      sourceIops: sourceAnswers.sourceIops ?? SOURCE_DETAILS_DEFAULTS.sourceIops,
-      sourceThroughputMibps: sourceAnswers.sourceThroughputMibps ?? SOURCE_DETAILS_DEFAULTS.sourceThroughputMibps,
-      comfortFactor: sourceAnswers.comfortFactor
-        ?? (getDefaultSelectValue(comfortFactorQuestion) || SOURCE_DETAILS_DEFAULTS.comfortFactor),
-      assessmentCriteria: sourceAnswers.assessmentCriteria ?? SOURCE_DETAILS_DEFAULTS.assessmentCriteria,
+      region: sourceAnswers.region ?? SOURCE_DETAILS_DEFAULTS.region,
+      redundancy: sourceAnswers.redundancy ?? SOURCE_DETAILS_DEFAULTS.redundancy,
+      targetService: Array.isArray(sourceAnswers.targetService)
+        ? sourceAnswers.targetService
+        : SOURCE_DETAILS_DEFAULTS.targetService,
+      blobAccessFrequency: sourceAnswers.blobAccessFrequency ?? SOURCE_DETAILS_DEFAULTS.blobAccessFrequency,
+      filesMediaType: Array.isArray(sourceAnswers.filesMediaType)
+        ? sourceAnswers.filesMediaType
+        : (sourceAnswers.filesMediaType ? [sourceAnswers.filesMediaType] : defaultFilesMedia),
+      maximizeReadinessAcrossTargets:
+        sourceAnswers.maximizeReadinessAcrossTargets
+        ?? SOURCE_DETAILS_DEFAULTS.maximizeReadinessAcrossTargets,
     };
   }
 
@@ -232,28 +247,15 @@ export default function DecisionTree({ questions, onComplete }) {
   }
 
   function shouldShowSourceDetailsStep(sourceAnswers) {
-    return hasSourceDetailsStep
-      && sourceDetailsQuestions.every((sourceQuestion) => isQuestionVisible(sourceQuestion, sourceAnswers));
+    return hasSourceDetailsStep;
   }
 
   function shouldShowBlobInputsStep(sourceAnswers) {
-    const selectedServices = Array.isArray(sourceAnswers.targetService)
-      ? sourceAnswers.targetService
-      : [];
-
-    return hasBlobInputsStep
-      && selectedServices.includes("blobs")
-      && blobInputQuestions.every((blobQuestion) => isQuestionVisible(blobQuestion, sourceAnswers));
+    return false;
   }
 
   function shouldShowFilesInputsStep(sourceAnswers) {
-    const selectedServices = Array.isArray(sourceAnswers.targetService)
-      ? sourceAnswers.targetService
-      : [];
-
-    return hasFilesInputsStep
-      && selectedServices.includes("files")
-      && filesInputQuestions.every((filesQuestion) => isQuestionVisible(filesQuestion, sourceAnswers));
+    return false;
   }
 
   function getNextDetailIndex(startIndex, sourceAnswers) {
@@ -363,14 +365,20 @@ export default function DecisionTree({ questions, onComplete }) {
     setCommonValues((prev) => ({
       ...prev,
       nas: value,
-      targetService: value === "netapp"
-        ? prev.targetService
-        : prev.targetService.filter((service) => service !== "anf"),
     }));
+
+    if (value !== "netapp") {
+      setSourceDetailsValues((prev) => ({
+        ...prev,
+        targetService: Array.isArray(prev.targetService)
+          ? prev.targetService.filter((service) => service !== "anf")
+          : prev.targetService,
+      }));
+    }
   }
 
-  function toggleCommonTargetService(value) {
-    setCommonValues((prev) => ({
+  function toggleTargetService(value) {
+    setSourceDetailsValues((prev) => ({
       ...prev,
       targetService: prev.targetService.includes(value)
         ? prev.targetService.filter((service) => service !== value)
@@ -660,84 +668,86 @@ export default function DecisionTree({ questions, onComplete }) {
     ? getVisibleOptions(question.options, answers)
     : question?.options;
 
-  const regionQuestion = commonQuestions.find((q) => q.id === "region");
   const nasQuestion = commonQuestions.find((q) => q.id === "nas");
-  const targetServiceQuestion = commonQuestions.find((q) => q.id === "targetService");
-  const redundancyQuestion = commonQuestions.find((q) => q.id === "redundancy");
-  const sourceProtocolQuestion = sourceDetailsQuestions.find((q) => q.id === "sourceProtocol");
-  const sourceWorkloadTypeQuestion = sourceDetailsQuestions.find((q) => q.id === "workloadType");
-  const sourceShareSizeQuestion = sourceDetailsQuestions.find((q) => q.id === "sourceShareSizeTb");
-  const sourceIopsQuestion = sourceDetailsQuestions.find((q) => q.id === "sourceIops");
-  const sourceThroughputQuestion = sourceDetailsQuestions.find((q) => q.id === "sourceThroughputMibps");
-  const comfortFactorQuestion = sourceDetailsQuestions.find((q) => q.id === "comfortFactor");
-  const assessmentCriteriaQuestion = sourceDetailsQuestions.find((q) => q.id === "assessmentCriteria");
-  const blobAccessFrequencyQuestion = blobInputQuestions.find((q) => q.id === "blobAccessFrequency");
-  const filesMediaTypeQuestion = filesInputQuestions.find((q) => q.id === "filesMediaType");
+  const sourceProtocolQuestion = commonQuestions.find((q) => q.id === "sourceProtocol");
+  const sourceWorkloadTypeQuestion = commonQuestions.find((q) => q.id === "workloadType");
+  const sourceShareSizeQuestion = commonQuestions.find((q) => q.id === "sourceShareSizeTb");
+  const sourceIopsQuestion = commonQuestions.find((q) => q.id === "sourceIops");
+  const sourceThroughputQuestion = commonQuestions.find((q) => q.id === "sourceThroughputMibps");
+  const comfortFactorQuestion = commonQuestions.find((q) => q.id === "comfortFactor");
+  const assessmentCriteriaQuestion = commonQuestions.find((q) => q.id === "assessmentCriteria");
+  const regionQuestion = sourceDetailsQuestions.find((q) => q.id === "region");
+  const redundancyQuestion = sourceDetailsQuestions.find((q) => q.id === "redundancy");
+  const targetServiceQuestion = sourceDetailsQuestions.find((q) => q.id === "targetService");
+  const blobAccessFrequencyQuestion = sourceDetailsQuestions.find((q) => q.id === "blobAccessFrequency");
+  const filesMediaTypeQuestion = sourceDetailsQuestions.find((q) => q.id === "filesMediaType");
 
   const visibleSourceProtocolOptions = sourceProtocolQuestion
     ? getVisibleOptions(sourceProtocolQuestion.options, {
         ...answers,
-        ...sourceDetailsValues,
+        ...commonValues,
       })
     : [];
 
   const visibleSourceWorkloadTypeOptions = sourceWorkloadTypeQuestion
     ? getVisibleOptions(sourceWorkloadTypeQuestion.options, {
         ...answers,
-        ...sourceDetailsValues,
+        ...commonValues,
       })
     : [];
 
   const visibleComfortFactorOptions = comfortFactorQuestion
     ? getVisibleOptions(comfortFactorQuestion.options, {
         ...answers,
-        ...sourceDetailsValues,
+        ...commonValues,
       })
     : [];
 
   const visibleAssessmentCriteriaOptions = assessmentCriteriaQuestion
     ? getVisibleOptions(assessmentCriteriaQuestion.options, {
         ...answers,
-        ...sourceDetailsValues,
+        ...commonValues,
       })
     : [];
 
   const visibleCommonServiceOptions = targetServiceQuestion
     ? getVisibleOptions(targetServiceQuestion.options, {
         ...answers,
-        ...commonValues,
+        ...sourceDetailsValues,
       })
     : [];
 
   const visibleBlobFrequencyOptions = blobAccessFrequencyQuestion
     ? getVisibleOptions(blobAccessFrequencyQuestion.options, {
         ...answers,
-        ...blobInputValues,
+        ...sourceDetailsValues,
       })
     : [];
 
   const visibleFilesMediaOptions = filesMediaTypeQuestion
     ? getVisibleOptions(filesMediaTypeQuestion.options, {
         ...answers,
-        ...filesInputValues,
+        ...sourceDetailsValues,
       })
     : [];
 
   const isCommonValid =
-    commonValues.region &&
     commonValues.nas &&
-    commonValues.redundancy &&
-    commonValues.targetService.length > 0;
+    Array.isArray(commonValues.sourceProtocol) &&
+    commonValues.sourceProtocol.length > 0 &&
+    commonValues.workloadType &&
+    isPositiveNumber(commonValues.sourceShareSizeTb) &&
+    isPositiveNumber(commonValues.sourceIops) &&
+    isPositiveNumber(commonValues.sourceThroughputMibps) &&
+    commonValues.comfortFactor &&
+    commonValues.assessmentCriteria;
 
   const isSourceDetailsValid =
-    Array.isArray(sourceDetailsValues.sourceProtocol) &&
-    sourceDetailsValues.sourceProtocol.length > 0 &&
-    sourceDetailsValues.workloadType &&
-    isPositiveNumber(sourceDetailsValues.sourceShareSizeTb) &&
-    isPositiveNumber(sourceDetailsValues.sourceIops) &&
-    isPositiveNumber(sourceDetailsValues.sourceThroughputMibps) &&
-    sourceDetailsValues.comfortFactor &&
-    sourceDetailsValues.assessmentCriteria;
+    sourceDetailsValues.region &&
+    sourceDetailsValues.redundancy &&
+    Array.isArray(sourceDetailsValues.targetService) &&
+    sourceDetailsValues.targetService.length > 0 &&
+    (!sourceDetailsValues.targetService.includes("blobs") || sourceDetailsValues.blobAccessFrequency);
 
   const isBlobInputsValid =
     blobInputValues.blobAccessFrequency;
@@ -747,12 +757,7 @@ export default function DecisionTree({ questions, onComplete }) {
     && filesInputValues.filesMediaType.length > 0;
 
   const commonAnswered =
-    answers.region !== undefined &&
     answers.nas !== undefined &&
-    answers.targetService !== undefined &&
-    answers.redundancy !== undefined;
-
-  const sourceDetailsAnswered =
     answers.sourceProtocol !== undefined &&
     answers.workloadType !== undefined &&
     answers.sourceShareSizeTb !== undefined &&
@@ -761,6 +766,11 @@ export default function DecisionTree({ questions, onComplete }) {
     answers.comfortFactor !== undefined &&
     answers.assessmentCriteria !== undefined;
 
+  const sourceDetailsAnswered =
+    answers.region !== undefined &&
+    answers.redundancy !== undefined &&
+    answers.targetService !== undefined;
+
   const blobInputsAnswered =
     answers.blobAccessFrequency !== undefined;
 
@@ -768,13 +778,7 @@ export default function DecisionTree({ questions, onComplete }) {
     answers.filesMediaType !== undefined;
 
   const commonSummaryLabel = [
-    regionQuestion ? resolveLabel(regionQuestion, answers.region) : "",
     nasQuestion ? resolveLabel(nasQuestion, answers.nas) : "",
-    targetServiceQuestion ? resolveLabel(targetServiceQuestion, answers.targetService) : "",
-    redundancyQuestion ? resolveLabel(redundancyQuestion, answers.redundancy) : "",
-  ].filter(Boolean).join(" | ");
-
-  const sourceDetailsSummaryLabel = [
     sourceProtocolQuestion ? resolveLabel(sourceProtocolQuestion, answers.sourceProtocol) : "",
     sourceWorkloadTypeQuestion ? resolveLabel(sourceWorkloadTypeQuestion, answers.workloadType) : "",
     sourceShareSizeQuestion && answers.sourceShareSizeTb !== undefined ? `${answers.sourceShareSizeTb} GB` : "",
@@ -782,6 +786,14 @@ export default function DecisionTree({ questions, onComplete }) {
     sourceThroughputQuestion && answers.sourceThroughputMibps !== undefined ? `${answers.sourceThroughputMibps} MiB/s` : "",
     comfortFactorQuestion ? resolveLabel(comfortFactorQuestion, answers.comfortFactor) : "",
     assessmentCriteriaQuestion ? resolveLabel(assessmentCriteriaQuestion, answers.assessmentCriteria) : "",
+  ].filter(Boolean).join(" | ");
+
+  const sourceDetailsSummaryLabel = [
+    regionQuestion ? resolveLabel(regionQuestion, answers.region) : "",
+    redundancyQuestion ? resolveLabel(redundancyQuestion, answers.redundancy) : "",
+    targetServiceQuestion ? resolveLabel(targetServiceQuestion, answers.targetService) : "",
+    blobAccessFrequencyQuestion ? resolveLabel(blobAccessFrequencyQuestion, answers.blobAccessFrequency) : "",
+    answers.maximizeReadinessAcrossTargets ? "Maximise readiness enabled" : "Maximise readiness disabled",
   ].filter(Boolean).join(" | ");
 
   const blobInputsSummaryLabel = [
@@ -817,14 +829,14 @@ export default function DecisionTree({ questions, onComplete }) {
       {/* Compact answered cards */}
       {!isCommonStep && commonAnswered && (
         <div className="answered-card common-answered-card">
-          <span className="answered-label">Common questions</span>
+          <span className="answered-label">Source details</span>
           <span className="answered-value">{commonSummaryLabel}</span>
         </div>
       )}
 
       {!isCommonStep && !isSourceDetailsStep && showSourceDetailsStep && sourceDetailsAnswered && (
         <div className="answered-card source-details-answered-card">
-          <span className="answered-label">Enter your source share details</span>
+          <span className="answered-label">Target details</span>
           <span className="answered-value">{sourceDetailsSummaryLabel}</span>
         </div>
       )}
@@ -857,36 +869,11 @@ export default function DecisionTree({ questions, onComplete }) {
       {isCommonStep ? (
         <div className="card common-card" ref={activeRef}>
           <p className="step-label">Step 1</p>
-          <h2 className="question-text">Common questions</h2>
-          <p className="question-note">These answers apply across Azure Files and Azure Blob recommendations.</p>
+          <h2 className="question-text">Source details</h2>
+          <p className="question-note">Provide source-share details first so we can evaluate target options consistently.</p>
 
           <div className="common-grid">
             <div className="common-field common-field--full">
-              <label className="common-field-label" htmlFor="common-region">{regionQuestion?.text}</label>
-              <select
-                id="common-region"
-                className="select-input"
-                value={commonValues.region}
-                onChange={(e) => setCommonValues((prev) => ({ ...prev, region: e.target.value }))}
-              >
-                {regionQuestion?.placeholder && (
-                  <option value="" disabled>{regionQuestion.placeholder}</option>
-                )}
-                {regionQuestion && isGrouped(regionQuestion)
-                  ? regionQuestion.options.map((group) => (
-                      <optgroup key={group.group} label={group.group}>
-                        {group.items.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))
-                  : null}
-              </select>
-            </div>
-
-            <div className="common-field">
               <label className="common-field-label" htmlFor="common-nas">{nasQuestion?.text}</label>
               <select
                 id="common-nas"
@@ -905,76 +892,17 @@ export default function DecisionTree({ questions, onComplete }) {
               </select>
             </div>
 
-            <div className="common-field">
-              <label className="common-field-label" htmlFor="common-redundancy">{redundancyQuestion?.text}</label>
-              <select
-                id="common-redundancy"
-                className="select-input"
-                value={commonValues.redundancy}
-                onChange={(e) => setCommonValues((prev) => ({ ...prev, redundancy: e.target.value }))}
-              >
-                {redundancyQuestion?.placeholder && (
-                  <option value="" disabled>{redundancyQuestion.placeholder}</option>
-                )}
-                {redundancyQuestion?.options?.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="common-field common-field--full">
-              <p className="common-field-label">{targetServiceQuestion?.text}</p>
-              <p className="multiselect-hint">Select all that apply</p>
-              <div className="checkbox-list common-checkbox-list">
-                {visibleCommonServiceOptions.map((opt) => (
-                  <label key={opt.value} className={`checkbox-label${commonValues.targetService.includes(opt.value) ? " checked" : ""}`}>
-                    <input
-                      type="checkbox"
-                      className="checkbox-input"
-                      checked={commonValues.targetService.includes(opt.value)}
-                      onChange={() => toggleCommonTargetService(opt.value)}
-                    />
-                    <span className="checkbox-text">{opt.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <button
-            className="continue-btn"
-            disabled={!isCommonValid}
-            onClick={handleCommonContinue}
-          >
-            Continue →
-          </button>
-
-          {hasCommonStep && (
-            <button className="back-btn" onClick={handleBack}>
-              ← Back
-            </button>
-          )}
-        </div>
-      ) : isSourceDetailsStep ? (
-        <div className="card source-details-card" ref={activeRef}>
-          <p className="step-label">Step {stepNumber}</p>
-          <h2 className="question-text">Enter your source share details</h2>
-          <p className="question-note">Provide source-share metrics and criteria used in recommendation calculations.</p>
-
-          <div className="common-grid source-details-grid">
             <div className="common-field common-field--full">
               <p className="common-field-label">{sourceProtocolQuestion?.text}</p>
               <p className="multiselect-hint">Select all that apply</p>
               <div className="checkbox-list common-checkbox-list">
                 {visibleSourceProtocolOptions.map((opt) => (
-                  <label key={opt.value} className={`checkbox-label${sourceDetailsValues.sourceProtocol.includes(opt.value) ? " checked" : ""}`}>
+                  <label key={opt.value} className={`checkbox-label${commonValues.sourceProtocol.includes(opt.value) ? " checked" : ""}`}>
                     <input
                       type="checkbox"
                       className="checkbox-input"
-                      checked={sourceDetailsValues.sourceProtocol.includes(opt.value)}
-                      onChange={() => setSourceDetailsValues((prev) => ({
+                      checked={commonValues.sourceProtocol.includes(opt.value)}
+                      onChange={() => setCommonValues((prev) => ({
                         ...prev,
                         sourceProtocol: prev.sourceProtocol.includes(opt.value)
                           ? prev.sourceProtocol.filter((value) => value !== opt.value)
@@ -1003,8 +931,8 @@ export default function DecisionTree({ questions, onComplete }) {
               <select
                 id="source-workload-type"
                 className="select-input"
-                value={sourceDetailsValues.workloadType}
-                onChange={(e) => setSourceDetailsValues((prev) => ({ ...prev, workloadType: e.target.value }))}
+                value={commonValues.workloadType}
+                onChange={(e) => setCommonValues((prev) => ({ ...prev, workloadType: e.target.value }))}
               >
                 {sourceWorkloadTypeQuestion?.placeholder && (
                   <option value="" disabled>{sourceWorkloadTypeQuestion.placeholder}</option>
@@ -1026,8 +954,8 @@ export default function DecisionTree({ questions, onComplete }) {
                 min="0"
                 step="0.01"
                 placeholder={sourceShareSizeQuestion?.placeholder ?? "Enter value"}
-                value={sourceDetailsValues.sourceShareSizeTb}
-                onChange={(e) => setSourceDetailsValues((prev) => ({ ...prev, sourceShareSizeTb: e.target.value }))}
+                value={commonValues.sourceShareSizeTb}
+                onChange={(e) => setCommonValues((prev) => ({ ...prev, sourceShareSizeTb: e.target.value }))}
               />
             </div>
 
@@ -1040,8 +968,8 @@ export default function DecisionTree({ questions, onComplete }) {
                 min="0"
                 step="1"
                 placeholder={sourceIopsQuestion?.placeholder ?? "Enter value"}
-                value={sourceDetailsValues.sourceIops}
-                onChange={(e) => setSourceDetailsValues((prev) => ({ ...prev, sourceIops: e.target.value }))}
+                value={commonValues.sourceIops}
+                onChange={(e) => setCommonValues((prev) => ({ ...prev, sourceIops: e.target.value }))}
               />
             </div>
 
@@ -1054,8 +982,8 @@ export default function DecisionTree({ questions, onComplete }) {
                 min="0"
                 step="0.01"
                 placeholder={sourceThroughputQuestion?.placeholder ?? "Enter value"}
-                value={sourceDetailsValues.sourceThroughputMibps}
-                onChange={(e) => setSourceDetailsValues((prev) => ({ ...prev, sourceThroughputMibps: e.target.value }))}
+                value={commonValues.sourceThroughputMibps}
+                onChange={(e) => setCommonValues((prev) => ({ ...prev, sourceThroughputMibps: e.target.value }))}
               />
             </div>
 
@@ -1064,8 +992,8 @@ export default function DecisionTree({ questions, onComplete }) {
               <select
                 id="comfort-factor"
                 className="select-input"
-                value={sourceDetailsValues.comfortFactor}
-                onChange={(e) => setSourceDetailsValues((prev) => ({ ...prev, comfortFactor: e.target.value }))}
+                value={commonValues.comfortFactor}
+                onChange={(e) => setCommonValues((prev) => ({ ...prev, comfortFactor: e.target.value }))}
               >
                 {visibleComfortFactorOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -1080,8 +1008,8 @@ export default function DecisionTree({ questions, onComplete }) {
               <select
                 id="assessment-criteria"
                 className="select-input"
-                value={sourceDetailsValues.assessmentCriteria}
-                onChange={(e) => setSourceDetailsValues((prev) => ({ ...prev, assessmentCriteria: e.target.value }))}
+                value={commonValues.assessmentCriteria}
+                onChange={(e) => setCommonValues((prev) => ({ ...prev, assessmentCriteria: e.target.value }))}
               >
                 {assessmentCriteriaQuestion?.placeholder && (
                   <option value="" disabled>{assessmentCriteriaQuestion.placeholder}</option>
@@ -1092,6 +1020,124 @@ export default function DecisionTree({ questions, onComplete }) {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <button
+            className="continue-btn"
+            disabled={!isCommonValid}
+            onClick={handleCommonContinue}
+          >
+            Continue →
+          </button>
+
+        </div>
+      ) : isSourceDetailsStep ? (
+        <div className="card source-details-card" ref={activeRef}>
+          <p className="step-label">Step {stepNumber}</p>
+          <h2 className="question-text">Target details</h2>
+          <p className="question-note">Provide target settings in one step. Azure Files assesses both Premium SSD and Standard HDD by default.</p>
+
+          <div className="common-grid source-details-grid">
+            <div className="common-field common-field--full">
+              <label className="common-field-label" htmlFor="target-region">{regionQuestion?.text}</label>
+              <select
+                id="target-region"
+                className="select-input"
+                value={sourceDetailsValues.region}
+                onChange={(e) => setSourceDetailsValues((prev) => ({ ...prev, region: e.target.value }))}
+              >
+                {regionQuestion?.placeholder && (
+                  <option value="" disabled>{regionQuestion.placeholder}</option>
+                )}
+                {regionQuestion && isGrouped(regionQuestion)
+                  ? regionQuestion.options.map((group) => (
+                      <optgroup key={group.group} label={group.group}>
+                        {group.items.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))
+                  : null}
+              </select>
+            </div>
+
+            <div className="common-field common-field--full">
+              <label className="common-field-label" htmlFor="target-redundancy">{redundancyQuestion?.text}</label>
+              <select
+                id="target-redundancy"
+                className="select-input"
+                value={sourceDetailsValues.redundancy}
+                onChange={(e) => setSourceDetailsValues((prev) => ({ ...prev, redundancy: e.target.value }))}
+              >
+                {redundancyQuestion?.placeholder && (
+                  <option value="" disabled>{redundancyQuestion.placeholder}</option>
+                )}
+                {redundancyQuestion?.options?.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="common-field common-field--full">
+              <p className="common-field-label">{targetServiceQuestion?.text}</p>
+              <p className="multiselect-hint">Select all that apply</p>
+              <div className="checkbox-list common-checkbox-list">
+                {visibleCommonServiceOptions.map((opt) => (
+                  <label key={opt.value} className={`checkbox-label${sourceDetailsValues.targetService.includes(opt.value) ? " checked" : ""}`}>
+                    <input
+                      type="checkbox"
+                      className="checkbox-input"
+                      checked={sourceDetailsValues.targetService.includes(opt.value)}
+                      onChange={() => toggleTargetService(opt.value)}
+                    />
+                    <span className="checkbox-text">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {sourceDetailsValues.targetService.includes("blobs") && (
+              <div className="common-field common-field--full">
+                <label className="common-field-label" htmlFor="blob-access-frequency">{blobAccessFrequencyQuestion?.text}</label>
+                <select
+                  id="blob-access-frequency"
+                  className="select-input"
+                  value={sourceDetailsValues.blobAccessFrequency}
+                  onChange={(e) => setSourceDetailsValues((prev) => ({ ...prev, blobAccessFrequency: e.target.value }))}
+                >
+                  {blobAccessFrequencyQuestion?.placeholder && (
+                    <option value="" disabled>{blobAccessFrequencyQuestion.placeholder}</option>
+                  )}
+                  {visibleBlobFrequencyOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="common-field common-field--full">
+              <label className={`checkbox-label${sourceDetailsValues.maximizeReadinessAcrossTargets ? " checked" : ""}`}>
+                <input
+                  type="checkbox"
+                  className="checkbox-input"
+                  checked={sourceDetailsValues.maximizeReadinessAcrossTargets}
+                  onChange={(e) => setSourceDetailsValues((prev) => ({
+                    ...prev,
+                    maximizeReadinessAcrossTargets: e.target.checked,
+                  }))}
+                />
+                <span className="checkbox-text">Maximise readiness across target services</span>
+              </label>
+              <p className="question-note">
+                When enabled, an additional alternative target option is shown as Ready with Condition with protocol/application adaptation guidance.
+              </p>
             </div>
           </div>
 

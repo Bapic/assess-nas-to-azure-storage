@@ -253,7 +253,7 @@ export const questions = [
     id: "filesMediaType",
     text: "Select the media type [Applicable for AzFiles]",
     type: "multiselect",
-    defaultValues: ["ssd"],
+    defaultValues: ["ssd", "hdd"],
     // Only shown when Azure Files is among the selected target services
     showIf: { targetService: { includes: "files" } },
     options: [
