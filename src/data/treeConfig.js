@@ -188,10 +188,10 @@ export const questions = [
   },
   {
     id: "workloadType",
-    text: "Select the workload type for your file storage data",
+    text: "Select the workload type for your NAS shares",
     type: "select",
     placeholder: "— Select workload type —",
-    note: "This selection is used only to calculate IOPS and transactions costs for all eligible storage SKUs.",
+    tooltip: "Used only for calculating IO transactions for Azure Blob.",
     options: [
       {
         label: "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
@@ -212,6 +212,10 @@ export const questions = [
       {
         label: "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
         value: "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+      },
+      {
+        label: "Mixed workloads",
+        value: "Mixed workloads",
       },
     ],
   },

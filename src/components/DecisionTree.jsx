@@ -671,7 +671,6 @@ export default function DecisionTree({ questions, onComplete }) {
   const sourceThroughputQuestion = sourceDetailsQuestions.find((q) => q.id === "sourceThroughputMibps");
   const comfortFactorQuestion = sourceDetailsQuestions.find((q) => q.id === "comfortFactor");
   const assessmentCriteriaQuestion = sourceDetailsQuestions.find((q) => q.id === "assessmentCriteria");
-  const blobWorkloadTypeQuestion = blobInputQuestions.find((q) => q.id === "blobWorkloadType");
   const blobAccessFrequencyQuestion = blobInputQuestions.find((q) => q.id === "blobAccessFrequency");
   const filesMediaTypeQuestion = filesInputQuestions.find((q) => q.id === "filesMediaType");
 
@@ -710,13 +709,6 @@ export default function DecisionTree({ questions, onComplete }) {
       })
     : [];
 
-  const visibleBlobWorkloadOptions = blobWorkloadTypeQuestion
-    ? getVisibleOptions(blobWorkloadTypeQuestion.options, {
-        ...answers,
-        ...blobInputValues,
-      })
-    : [];
-
   const visibleBlobFrequencyOptions = blobAccessFrequencyQuestion
     ? getVisibleOptions(blobAccessFrequencyQuestion.options, {
         ...answers,
@@ -748,7 +740,6 @@ export default function DecisionTree({ questions, onComplete }) {
     sourceDetailsValues.assessmentCriteria;
 
   const isBlobInputsValid =
-    blobInputValues.blobWorkloadType &&
     blobInputValues.blobAccessFrequency;
 
   const isFilesInputsValid =
@@ -771,7 +762,6 @@ export default function DecisionTree({ questions, onComplete }) {
     answers.assessmentCriteria !== undefined;
 
   const blobInputsAnswered =
-    answers.blobWorkloadType !== undefined &&
     answers.blobAccessFrequency !== undefined;
 
   const filesInputsAnswered =
@@ -795,7 +785,6 @@ export default function DecisionTree({ questions, onComplete }) {
   ].filter(Boolean).join(" | ");
 
   const blobInputsSummaryLabel = [
-    blobWorkloadTypeQuestion ? resolveLabel(blobWorkloadTypeQuestion, answers.blobWorkloadType) : "",
     blobAccessFrequencyQuestion ? resolveLabel(blobAccessFrequencyQuestion, answers.blobAccessFrequency) : "",
   ].filter(Boolean).join(" | ");
 
@@ -999,7 +988,18 @@ export default function DecisionTree({ questions, onComplete }) {
             </div>
 
             <div className="common-field common-field--full">
-              <label className="common-field-label" htmlFor="source-workload-type">{sourceWorkloadTypeQuestion?.text}</label>
+              <label className="common-field-label" htmlFor="source-workload-type">
+                {sourceWorkloadTypeQuestion?.text}
+                {sourceWorkloadTypeQuestion?.tooltip && (
+                  <span
+                    className="question-tooltip"
+                    title={sourceWorkloadTypeQuestion.tooltip}
+                    aria-label={sourceWorkloadTypeQuestion.tooltip}
+                  >
+                    i
+                  </span>
+                )}
+              </label>
               <select
                 id="source-workload-type"
                 className="select-input"
@@ -1115,25 +1115,6 @@ export default function DecisionTree({ questions, onComplete }) {
 
           <div className="common-grid blob-inputs-grid">
             <div className="common-field">
-              <label className="common-field-label" htmlFor="blob-workload-type">{blobWorkloadTypeQuestion?.text}</label>
-              <select
-                id="blob-workload-type"
-                className="select-input"
-                value={blobInputValues.blobWorkloadType}
-                onChange={(e) => setBlobInputValues((prev) => ({ ...prev, blobWorkloadType: e.target.value }))}
-              >
-                {blobWorkloadTypeQuestion?.placeholder && (
-                  <option value="" disabled>{blobWorkloadTypeQuestion.placeholder}</option>
-                )}
-                {visibleBlobWorkloadOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="common-field">
               <label className="common-field-label" htmlFor="blob-access-frequency">{blobAccessFrequencyQuestion?.text}</label>
               <select
                 id="blob-access-frequency"
@@ -1211,7 +1192,18 @@ export default function DecisionTree({ questions, onComplete }) {
       ) : (
         <div className="card" ref={activeRef}>
           <p className="step-label">Step {stepNumber}</p>
-          <h2 className="question-text">{question.text}</h2>
+          <h2 className="question-text">
+            {question.text}
+            {question.tooltip && (
+              <span
+                className="question-tooltip"
+                title={question.tooltip}
+                aria-label={question.tooltip}
+              >
+                i
+              </span>
+            )}
+          </h2>
           {question.note && (
             <p className="question-note">{question.note}</p>
           )}

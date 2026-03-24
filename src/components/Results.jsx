@@ -132,6 +132,25 @@ function getComparisonBadgeClass(status) {
   return "comparison-badge comparison-badge-nomapping";
 }
 
+function isToggleEnabled(value) {
+  return ["1", "true", "yes", "on"].includes(String(value ?? "").toLowerCase());
+}
+
+function getTrackBVisibilityFlag() {
+  const envEnabled = isToggleEnabled(import.meta.env.VITE_SHOW_TRACK_B);
+
+  if (typeof window === "undefined") {
+    return envEnabled;
+  }
+
+  const queryValue = new URLSearchParams(window.location.search).get("trackB");
+  if (queryValue !== null) {
+    return isToggleEnabled(queryValue);
+  }
+
+  return envEnabled;
+}
+
 function evaluateOutcomeReadiness({
   outcome,
   answers,
@@ -557,7 +576,10 @@ function getFilesRecommendationReasons({
       );
     } else if (preferLowerSkuFirst) {
       reasons.push(
-        "Multiple Azure Files SKUs are suitable. Track B starts from lower SKU (Standard HDD) and escalates to Premium SSD only when the lower SKU is Not Ready for current performance/suitability checks."
+        "Multiple Azure Files SKUs are suitable. Recommendation starts from the lowest suitable SKU (Standard HDD) and escalates to Premium SSD only when the lower SKU is Not Ready for current performance/suitability checks."
+      );
+      reasons.push(
+        "In the real application, when both SKU are ready and has equal weight, the cost effective one will be displayed to the user."
       );
     } else {
       reasons.push(
@@ -658,6 +680,7 @@ export default function Results({
     ?? (autoIncludedBlobForProtocolPriority ? "hot" : null);
   const effectiveBlobsSelected = blobsSelected || autoIncludedBlobForProtocolPriority;
   const showRecommendedSection = filesSelected || effectiveBlobsSelected;
+  const showTrackB = getTrackBVisibilityFlag();
 
   const allowedByService = new Set(effectiveServices.flatMap((svc) => serviceOutcomeMap[svc] ?? []));
   const evaluatedOutcomes = outcomeCatalog.filter((outcome) => allowedByService.has(outcome.id));
@@ -708,7 +731,11 @@ export default function Results({
   const eligibleBlobOutcomes = eligibleOutcomes.filter((outcome) => blobOutcomeSet.has(outcome.id));
   const eligibleFilesOutcomes = eligibleOutcomes.filter((outcome) => filesOutcomeSet.has(outcome.id));
   const bestBlobOutcome = getBestOutcomeByRank(eligibleBlobOutcomes, blobOutcomeRank);
-  const bestFilesOutcome = getBestOutcomeByRank(eligibleFilesOutcomes, filesOutcomeRank);
+  const bestFilesOutcome = getFilesOutcomeByLowerSkuEscalation(
+    eligibleFilesOutcomes,
+    filesOutcomeRank,
+    readinessByOutcomeId
+  ) ?? getBestOutcomeByRank(eligibleFilesOutcomes, filesOutcomeRank);
   const bestBlobReadiness = bestBlobOutcome
     ? readinessByOutcomeId.get(bestBlobOutcome.id)
     : null;
@@ -824,6 +851,7 @@ export default function Results({
         bestFilesOutcome,
         eligibleFilesOutcomes,
         preferredChoiceOverrideApplies: false,
+        preferLowerSkuFirst: true,
         filesSkuRegionAdjustment,
         filesPerformanceEligibility,
         filesSkuLabelMap,
@@ -1031,10 +1059,8 @@ export default function Results({
         </ul>
       </div>
 
-      <div className="track-columns">
+      <div className={`track-columns${showTrackB ? "" : " single-track"}`}>
         <section className="track-panel" aria-label="Track A panel">
-          <h3 className="track-panel-heading">Track A — Current App Logic</h3>
-
           {showRecommendedSection && (
             <section className="recommended-section" aria-label="Track A recommended services">
               <h3 className="recommended-heading">RECOMMENDED</h3>
@@ -1044,8 +1070,10 @@ export default function Results({
                   <article className="recommended-card">
                     <div className="recommended-title-row">
                       <h4 className="recommended-card-title">Best Eligible Azure Blob Access Tier</h4>
-                      {blobComparisonStatus && (
-                        <span className={getComparisonBadgeClass(blobComparisonStatus)}>{blobComparisonStatus}</span>
+                      {bestBlobReadiness && (
+                        <span className={getReadinessBadgeClass(bestBlobReadiness.readinessState)}>
+                          {bestBlobReadiness.readinessState}
+                        </span>
                       )}
                     </div>
                     <p className="recommended-card-value">
@@ -1081,8 +1109,10 @@ export default function Results({
                   <article className="recommended-card">
                     <div className="recommended-title-row">
                       <h4 className="recommended-card-title">Best Eligible Azure Files SKU</h4>
-                      {filesComparisonStatus && (
-                        <span className={getComparisonBadgeClass(filesComparisonStatus)}>{filesComparisonStatus}</span>
+                      {bestFilesReadiness && (
+                        <span className={getReadinessBadgeClass(bestFilesReadiness.readinessState)}>
+                          {bestFilesReadiness.readinessState}
+                        </span>
                       )}
                     </div>
                     <p className="recommended-card-value">
@@ -1123,64 +1153,69 @@ export default function Results({
               adjusting your selections.
             </p>
           ) : (
-            <>
-              {!hasReadyOrConditionalOutcome && (
-                <p className="no-results">
-                  All evaluated SKUs/tier are currently marked as Not Ready for the selected inputs.
-                </p>
-              )}
+            <details className="assessed-options-disclosure">
+              <summary className="assessed-options-summary">Options that were assessed</summary>
 
-              <ul className="results-list">
-                {evaluatedOutcomes.map((outcome) => {
-                  const outcomeTier = getOutcomeTierLabel(outcome);
-                  const redundancyAdjustment = getOutcomeRedundancyAdjustment(answers, outcome.id);
-                  const effectiveRedundancy = redundancyAdjustment?.applied ?? answers?.redundancy;
-                  const outcomeRedundancy =
-                    redundancyLabelMap[effectiveRedundancy] ?? String(effectiveRedundancy ?? "N/A");
-                  const readiness = readinessByOutcomeId.get(outcome.id);
-                  const readinessState = readiness?.readinessState ?? "Not Ready";
-                  const readinessReasons = readiness?.readinessReasons ?? ["No readiness details available."];
+              <div className="assessed-options-content">
+                {!hasReadyOrConditionalOutcome && (
+                  <p className="no-results">
+                    All evaluated SKUs/tier are currently marked as Not Ready for the selected inputs.
+                  </p>
+                )}
 
-                  return (
-                    <li key={outcome.id} className="result-item">
-                      <div className="result-title-row">
-                        <h3 className="result-title">{outcome.title}</h3>
-                        <span className={getReadinessBadgeClass(readinessState)}>{readinessState}</span>
-                        {redundancyAdjustment && redundancyAdjustment.requested !== redundancyAdjustment.applied && (
-                          <span className="result-badge" aria-label="Redundancy adjusted for compatibility">
-                            Redundancy downgraded to {redundancyLabelMap[redundancyAdjustment.applied]}
-                          </span>
-                        )}
-                        {outcome.id === blobTierRegionAdjustment?.applied && (
-                          <span className="result-badge" aria-label="Tier adjusted for regional availability">
-                            Tier upgraded from {blobTierLabelMap[blobTierRegionAdjustment.requested]}
-                          </span>
-                        )}
-                        {filesFallbackOutcomeSet.has(outcome.id) && (
-                          <span className="result-badge" aria-label="Azure Files SKU adjusted for regional availability">
-                            SKU switched due to regional availability
-                          </span>
-                        )}
-                      </div>
-                      <p className="result-meta">
-                        Tier: {outcomeTier} | Redundancy: {outcomeRedundancy} | Protocol: {getSupportedProtocolLabelForOutcome(outcome.id)}
-                      </p>
-                      <ul className="readiness-reasons-list">
-                        {readinessReasons.map((reason, index) => (
-                          <li key={`${outcome.id}-reason-${index}`}>{reason}</li>
-                        ))}
-                      </ul>
-                      <p className="result-description">{outcome.description}</p>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
+                <ul className="results-list">
+                  {evaluatedOutcomes.map((outcome) => {
+                    const outcomeTier = getOutcomeTierLabel(outcome);
+                    const redundancyAdjustment = getOutcomeRedundancyAdjustment(answers, outcome.id);
+                    const effectiveRedundancy = redundancyAdjustment?.applied ?? answers?.redundancy;
+                    const outcomeRedundancy =
+                      redundancyLabelMap[effectiveRedundancy] ?? String(effectiveRedundancy ?? "N/A");
+                    const readiness = readinessByOutcomeId.get(outcome.id);
+                    const readinessState = readiness?.readinessState ?? "Not Ready";
+                    const readinessReasons = readiness?.readinessReasons ?? ["No readiness details available."];
+
+                    return (
+                      <li key={outcome.id} className="result-item">
+                        <div className="result-title-row">
+                          <h3 className="result-title">{outcome.title}</h3>
+                          <span className={getReadinessBadgeClass(readinessState)}>{readinessState}</span>
+                          {redundancyAdjustment && redundancyAdjustment.requested !== redundancyAdjustment.applied && (
+                            <span className="result-badge" aria-label="Redundancy adjusted for compatibility">
+                              Redundancy downgraded to {redundancyLabelMap[redundancyAdjustment.applied]}
+                            </span>
+                          )}
+                          {outcome.id === blobTierRegionAdjustment?.applied && (
+                            <span className="result-badge" aria-label="Tier adjusted for regional availability">
+                              Tier upgraded from {blobTierLabelMap[blobTierRegionAdjustment.requested]}
+                            </span>
+                          )}
+                          {filesFallbackOutcomeSet.has(outcome.id) && (
+                            <span className="result-badge" aria-label="Azure Files SKU adjusted for regional availability">
+                              SKU switched due to regional availability
+                            </span>
+                          )}
+                        </div>
+                        <p className="result-meta">
+                          Tier: {outcomeTier} | Redundancy: {outcomeRedundancy} | Protocol: {getSupportedProtocolLabelForOutcome(outcome.id)}
+                        </p>
+                        <ul className="readiness-reasons-list">
+                          {readinessReasons.map((reason, index) => (
+                            <li key={`${outcome.id}-reason-${index}`}>{reason}</li>
+                          ))}
+                        </ul>
+                        <p className="result-description">{outcome.description}</p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </details>
           )}
         </section>
 
-        <section className="track-panel" aria-label="Track B panel">
-          <h3 className="track-panel-heading">Track B — Workload suitability mapping and preference + Track A Suitability</h3>
+        {showTrackB && (
+          <section className="track-panel" aria-label="Track B panel">
+            <h3 className="track-panel-heading">Track B — Workload suitability mapping and preference + Track A Suitability</h3>
 
           {showRecommendedSection && (
             <section className="recommended-section" aria-label="Track B preferred choice">
@@ -1269,61 +1304,66 @@ export default function Results({
               Track B did not return evaluated SKUs/tier for the current selection.
             </p>
           ) : (
-            <>
-              {!trackBHasReadyOrConditionalOutcome && (
-                <p className="no-results">
-                  All Track B evaluated SKUs/tier are currently marked as Not Ready for the selected inputs.
-                </p>
-              )}
+            <details className="assessed-options-disclosure">
+              <summary className="assessed-options-summary">Options that were assessed</summary>
 
-              <ul className="results-list">
-                {trackBEvaluatedOutcomes.map((outcome) => {
-                  const outcomeTier = getOutcomeTierLabel(outcome);
-                  const redundancyAdjustment = getOutcomeRedundancyAdjustment(answers, outcome.id);
-                  const effectiveRedundancy = redundancyAdjustment?.applied ?? answers?.redundancy;
-                  const outcomeRedundancy =
-                    redundancyLabelMap[effectiveRedundancy] ?? String(effectiveRedundancy ?? "N/A");
-                  const readiness = trackBReadinessByOutcomeId.get(outcome.id);
-                  const readinessState = readiness?.readinessState ?? "Not Ready";
-                  const readinessReasons = readiness?.readinessReasons ?? ["No readiness details available."];
+              <div className="assessed-options-content">
+                {!trackBHasReadyOrConditionalOutcome && (
+                  <p className="no-results">
+                    All Track B evaluated SKUs/tier are currently marked as Not Ready for the selected inputs.
+                  </p>
+                )}
 
-                  return (
-                    <li key={`trackb-${outcome.id}`} className="result-item">
-                      <div className="result-title-row">
-                        <h3 className="result-title">{outcome.title}</h3>
-                        <span className={getReadinessBadgeClass(readinessState)}>{readinessState}</span>
-                        {redundancyAdjustment && redundancyAdjustment.requested !== redundancyAdjustment.applied && (
-                          <span className="result-badge" aria-label="Redundancy adjusted for compatibility">
-                            Redundancy downgraded to {redundancyLabelMap[redundancyAdjustment.applied]}
-                          </span>
-                        )}
-                        {outcome.id === blobTierRegionAdjustment?.applied && (
-                          <span className="result-badge" aria-label="Tier adjusted for regional availability">
-                            Tier upgraded from {blobTierLabelMap[blobTierRegionAdjustment.requested]}
-                          </span>
-                        )}
-                        {filesFallbackOutcomeSet.has(outcome.id) && (
-                          <span className="result-badge" aria-label="Azure Files SKU adjusted for regional availability">
-                            SKU switched due to regional availability
-                          </span>
-                        )}
-                      </div>
-                      <p className="result-meta">
-                        Tier: {outcomeTier} | Redundancy: {outcomeRedundancy} | Protocol: {getSupportedProtocolLabelForOutcome(outcome.id)}
-                      </p>
-                      <ul className="readiness-reasons-list">
-                        {readinessReasons.map((reason, index) => (
-                          <li key={`trackb-${outcome.id}-reason-${index}`}>{reason}</li>
-                        ))}
-                      </ul>
-                      <p className="result-description">{outcome.description}</p>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
+                <ul className="results-list">
+                  {trackBEvaluatedOutcomes.map((outcome) => {
+                    const outcomeTier = getOutcomeTierLabel(outcome);
+                    const redundancyAdjustment = getOutcomeRedundancyAdjustment(answers, outcome.id);
+                    const effectiveRedundancy = redundancyAdjustment?.applied ?? answers?.redundancy;
+                    const outcomeRedundancy =
+                      redundancyLabelMap[effectiveRedundancy] ?? String(effectiveRedundancy ?? "N/A");
+                    const readiness = trackBReadinessByOutcomeId.get(outcome.id);
+                    const readinessState = readiness?.readinessState ?? "Not Ready";
+                    const readinessReasons = readiness?.readinessReasons ?? ["No readiness details available."];
+
+                    return (
+                      <li key={`trackb-${outcome.id}`} className="result-item">
+                        <div className="result-title-row">
+                          <h3 className="result-title">{outcome.title}</h3>
+                          <span className={getReadinessBadgeClass(readinessState)}>{readinessState}</span>
+                          {redundancyAdjustment && redundancyAdjustment.requested !== redundancyAdjustment.applied && (
+                            <span className="result-badge" aria-label="Redundancy adjusted for compatibility">
+                              Redundancy downgraded to {redundancyLabelMap[redundancyAdjustment.applied]}
+                            </span>
+                          )}
+                          {outcome.id === blobTierRegionAdjustment?.applied && (
+                            <span className="result-badge" aria-label="Tier adjusted for regional availability">
+                              Tier upgraded from {blobTierLabelMap[blobTierRegionAdjustment.requested]}
+                            </span>
+                          )}
+                          {filesFallbackOutcomeSet.has(outcome.id) && (
+                            <span className="result-badge" aria-label="Azure Files SKU adjusted for regional availability">
+                              SKU switched due to regional availability
+                            </span>
+                          )}
+                        </div>
+                        <p className="result-meta">
+                          Tier: {outcomeTier} | Redundancy: {outcomeRedundancy} | Protocol: {getSupportedProtocolLabelForOutcome(outcome.id)}
+                        </p>
+                        <ul className="readiness-reasons-list">
+                          {readinessReasons.map((reason, index) => (
+                            <li key={`trackb-${outcome.id}-reason-${index}`}>{reason}</li>
+                          ))}
+                        </ul>
+                        <p className="result-description">{outcome.description}</p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </details>
           )}
-        </section>
+          </section>
+        )}
       </div>
 
       {/* Inputs summary */}
