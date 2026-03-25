@@ -210,6 +210,9 @@ function isMixedPresetDistribution(workloadDistribution = {}) {
 }
 
 export default function DecisionTree({ questions, onComplete }) {
+  const DISCOVERED_METADATA_TAG = "Discovered metadata";
+  const USER_INPUT_TAG = "User input";
+
   const commonQuestions = COMMON_QUESTION_IDS
     .map((id) => questions.find((q) => q.id === id))
     .filter(Boolean);
@@ -1009,7 +1012,10 @@ export default function DecisionTree({ questions, onComplete }) {
 
           <div className="common-grid">
             <div className="common-field common-field--full">
-              <label className="common-field-label" htmlFor="common-nas">{nasQuestion?.text}</label>
+              <label className="common-field-label" htmlFor="common-nas">
+                {nasQuestion?.text}
+                <span className="field-tag field-tag-meta">{DISCOVERED_METADATA_TAG}</span>
+              </label>
               <select
                 id="common-nas"
                 className="select-input"
@@ -1028,7 +1034,10 @@ export default function DecisionTree({ questions, onComplete }) {
             </div>
 
             <div className="common-field common-field--full">
-              <p className="common-field-label">{sourceProtocolQuestion?.text}</p>
+              <p className="common-field-label">
+                {sourceProtocolQuestion?.text}
+                <span className="field-tag field-tag-meta">{DISCOVERED_METADATA_TAG}</span>
+              </p>
               <p className="multiselect-hint">Select all that apply</p>
               <div className="checkbox-list common-checkbox-list">
                 {visibleSourceProtocolOptions.map((opt) => (
@@ -1053,6 +1062,7 @@ export default function DecisionTree({ questions, onComplete }) {
             <div className="common-field common-field--full">
               <label className="common-field-label" htmlFor="source-workload-type">
                 {sourceWorkloadTypeQuestion?.text}
+                <span className="field-tag field-tag-user">{USER_INPUT_TAG}</span>
                 {sourceWorkloadTypeQuestion?.tooltip && (
                   <span
                     className="question-tooltip"
@@ -1185,7 +1195,10 @@ export default function DecisionTree({ questions, onComplete }) {
             </div>
 
             <div className="common-field common-field--full">
-              <label className="common-field-label" htmlFor="source-size-tb">{sourceShareSizeQuestion?.text}</label>
+              <label className="common-field-label" htmlFor="source-size-tb">
+                {sourceShareSizeQuestion?.text}
+                <span className="field-tag field-tag-meta">{DISCOVERED_METADATA_TAG}</span>
+              </label>
               <input
                 id="source-size-tb"
                 className="text-input"
@@ -1199,7 +1212,10 @@ export default function DecisionTree({ questions, onComplete }) {
             </div>
 
             <div className="common-field common-field--full">
-              <label className="common-field-label" htmlFor="source-iops">{sourceIopsQuestion?.text}</label>
+              <label className="common-field-label" htmlFor="source-iops">
+                {sourceIopsQuestion?.text}
+                <span className="field-tag field-tag-meta">{DISCOVERED_METADATA_TAG}</span>
+              </label>
               <input
                 id="source-iops"
                 className="text-input"
@@ -1213,7 +1229,10 @@ export default function DecisionTree({ questions, onComplete }) {
             </div>
 
             <div className="common-field common-field--full">
-              <label className="common-field-label" htmlFor="source-throughput">{sourceThroughputQuestion?.text}</label>
+              <label className="common-field-label" htmlFor="source-throughput">
+                {sourceThroughputQuestion?.text}
+                <span className="field-tag field-tag-meta">{DISCOVERED_METADATA_TAG}</span>
+              </label>
               <input
                 id="source-throughput"
                 className="text-input"
@@ -1227,7 +1246,10 @@ export default function DecisionTree({ questions, onComplete }) {
             </div>
 
             <div className="common-field common-field--full">
-              <label className="common-field-label" htmlFor="comfort-factor">{comfortFactorQuestion?.text}</label>
+              <label className="common-field-label" htmlFor="comfort-factor">
+                {comfortFactorQuestion?.text}
+                <span className="field-tag field-tag-meta">{DISCOVERED_METADATA_TAG}</span>
+              </label>
               <select
                 id="comfort-factor"
                 className="select-input"
@@ -1243,7 +1265,10 @@ export default function DecisionTree({ questions, onComplete }) {
             </div>
 
             <div className="common-field common-field--full">
-              <label className="common-field-label" htmlFor="assessment-criteria">{assessmentCriteriaQuestion?.text}</label>
+              <label className="common-field-label" htmlFor="assessment-criteria">
+                {assessmentCriteriaQuestion?.text}
+                <span className="field-tag field-tag-user">{USER_INPUT_TAG}</span>
+              </label>
               <select
                 id="assessment-criteria"
                 className="select-input"
@@ -1279,7 +1304,10 @@ export default function DecisionTree({ questions, onComplete }) {
 
           <div className="common-grid source-details-grid">
             <div className="common-field common-field--full">
-              <label className="common-field-label" htmlFor="target-region">{regionQuestion?.text}</label>
+              <label className="common-field-label" htmlFor="target-region">
+                {regionQuestion?.text}
+                <span className="field-tag field-tag-user">{USER_INPUT_TAG}</span>
+              </label>
               <select
                 id="target-region"
                 className="select-input"
@@ -1304,7 +1332,10 @@ export default function DecisionTree({ questions, onComplete }) {
             </div>
 
             <div className="common-field common-field--full">
-              <label className="common-field-label" htmlFor="target-redundancy">{redundancyQuestion?.text}</label>
+              <label className="common-field-label" htmlFor="target-redundancy">
+                {redundancyQuestion?.text}
+                <span className="field-tag field-tag-user">{USER_INPUT_TAG}</span>
+              </label>
               <select
                 id="target-redundancy"
                 className="select-input"
@@ -1323,7 +1354,10 @@ export default function DecisionTree({ questions, onComplete }) {
             </div>
 
             <div className="common-field common-field--full">
-              <p className="common-field-label">{targetServiceQuestion?.text}</p>
+              <p className="common-field-label">
+                {targetServiceQuestion?.text}
+                <span className="field-tag field-tag-user">{USER_INPUT_TAG}</span>
+              </p>
               <p className="multiselect-hint">Select all that apply</p>
               <div className="checkbox-list common-checkbox-list">
                 {visibleCommonServiceOptions.map((opt) => (
@@ -1342,7 +1376,10 @@ export default function DecisionTree({ questions, onComplete }) {
 
             {sourceDetailsValues.targetService.includes("blobs") && (
               <div className="common-field common-field--full">
-                <label className="common-field-label" htmlFor="blob-access-frequency">{blobAccessFrequencyQuestion?.text}</label>
+                <label className="common-field-label" htmlFor="blob-access-frequency">
+                  {blobAccessFrequencyQuestion?.text}
+                  <span className="field-tag field-tag-user">{USER_INPUT_TAG}</span>
+                </label>
                 <select
                   id="blob-access-frequency"
                   className="select-input"
