@@ -189,7 +189,7 @@ export const questions = [
   {
     id: "workloadType",
     text: "Select the workload type for your NAS shares",
-    type: "select",
+    type: "multiselect",
     placeholder: "— Select workload type —",
     tooltip: "Used only for calculating IO transactions for Azure Blob.",
     options: [
