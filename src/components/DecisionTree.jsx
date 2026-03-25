@@ -829,7 +829,7 @@ export default function DecisionTree({ questions, onComplete }) {
       {/* Compact answered cards */}
       {!isCommonStep && commonAnswered && (
         <div className="answered-card common-answered-card">
-          <span className="answered-label">Source details</span>
+          <span className="answered-label">Source details (one share at a time)</span>
           <span className="answered-value">{commonSummaryLabel}</span>
         </div>
       )}
@@ -869,7 +869,7 @@ export default function DecisionTree({ questions, onComplete }) {
       {isCommonStep ? (
         <div className="card common-card" ref={activeRef}>
           <p className="step-label">Step 1</p>
-          <h2 className="question-text">Source details</h2>
+          <h2 className="question-text">Source details (one share at a time)</h2>
           <p className="question-note">Provide source-share details first so we can evaluate target options consistently.</p>
 
           <div className="common-grid">

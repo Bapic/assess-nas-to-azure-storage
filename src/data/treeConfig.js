@@ -135,7 +135,7 @@ export const questions = [
   },
   {
     id: "sourceProtocol",
-    text: "Enter your Fileshare source protocol",
+    text: "Source share protocol (select multiple if multi-protocol enabled).",
     type: "multiselect",
     defaultValues: ["smb_v3"],
     options: [

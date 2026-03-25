@@ -120,6 +120,29 @@ function mergeReasonLists(primaryReasons = [], additionalReasons = []) {
   return [...new Set([...(primaryReasons || []), ...(additionalReasons || [])])];
 }
 
+const protocolAndApplicationFixStatement =
+  "Complete protocol and application suitability fixes, then validate via POC before production migration.";
+
+function hasProtocolOrApplicationAdaptationSignal(reasons = []) {
+  if (!Array.isArray(reasons) || reasons.length === 0) return false;
+
+  return reasons.some((reason) =>
+    /(protocol|application|adaptation|replatform|rearchitect|object storage|smb|nfs v4\.1)/i.test(String(reason))
+  );
+}
+
+function getReadinessReasonsWithProtocolFixLine(readinessState, reasons = []) {
+  if (readinessState !== "Ready with Condition") {
+    return reasons;
+  }
+
+  if (!hasProtocolOrApplicationAdaptationSignal(reasons)) {
+    return reasons;
+  }
+
+  return mergeReasonLists(reasons, [protocolAndApplicationFixStatement]);
+}
+
 function getReadinessBadgeClass(readinessState) {
   if (readinessState === "Ready") return "readiness-badge readiness-badge-ready";
   if (readinessState === "Ready with Condition") return "readiness-badge readiness-badge-condition";
@@ -918,6 +941,28 @@ export default function Results({
   const trackBBestFilesReadiness = trackBBestFilesOutcome
     ? trackBReadinessByOutcomeId.get(trackBBestFilesOutcome.id)
     : null;
+  const bestFilesDisplayReadinessState = s3FilesCrossAssessmentEnabled
+    ? "Ready with Condition"
+    : bestFilesReadiness?.readinessState;
+  const trackBBestFilesDisplayReadinessState = s3FilesCrossAssessmentEnabled
+    ? "Ready with Condition"
+    : trackBBestFilesReadiness?.readinessState;
+  const bestFilesDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
+    bestFilesDisplayReadinessState,
+    bestFilesReadiness?.readinessReasons ?? []
+  );
+  const bestBlobDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
+    bestBlobReadiness?.readinessState,
+    bestBlobReadiness?.readinessReasons ?? []
+  );
+  const trackBBestFilesDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
+    trackBBestFilesDisplayReadinessState,
+    trackBBestFilesReadiness?.readinessReasons ?? []
+  );
+  const trackBBestBlobDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
+    trackBBestBlobReadiness?.readinessState,
+    trackBBestBlobReadiness?.readinessReasons ?? []
+  );
 
   const blobRecommendationReasons = effectiveBlobsSelected
     ? getBlobRecommendationReasons({
@@ -1264,6 +1309,10 @@ export default function Results({
   const alternativeTrackAConditions = maximizeReadinessAcrossTargets
     ? getAlternativeConditions(alternativeTrackAOutcome, alternativeTrackAReadiness)
     : [];
+  const alternativeTrackADisplayConditions = getReadinessReasonsWithProtocolFixLine(
+    "Ready with Condition",
+    alternativeTrackAConditions
+  );
   const alternativeTrackARecommendationReasons = maximizeReadinessAcrossTargets
     ? getAlternativeRecommendationReasons({
         outcome: alternativeTrackAOutcome,
@@ -1285,6 +1334,10 @@ export default function Results({
   const alternativeTrackBConditions = maximizeReadinessAcrossTargets
     ? getAlternativeConditions(alternativeTrackBOutcome, alternativeTrackBReadiness)
     : [];
+  const alternativeTrackBDisplayConditions = getReadinessReasonsWithProtocolFixLine(
+    "Ready with Condition",
+    alternativeTrackBConditions
+  );
   const alternativeTrackBRecommendationReasons = maximizeReadinessAcrossTargets
     ? getAlternativeRecommendationReasons({
         outcome: alternativeTrackBOutcome,
@@ -1424,13 +1477,13 @@ export default function Results({
                     {bestFilesReadiness && (
                       <>
                         <p className="recommended-card-readiness">
-                          Readiness: {s3FilesCrossAssessmentEnabled ? "Ready with Condition" : bestFilesReadiness.readinessState}
+                          Readiness: {bestFilesDisplayReadinessState}
                         </p>
-                        {bestFilesReadiness.readinessReasons?.length > 0 && (
+                        {bestFilesDisplayReadinessReasons.length > 0 && (
                           <>
                             <h5 className="recommended-card-subheading">Readiness reasons</h5>
                             <ul className="readiness-reasons-list">
-                              {bestFilesReadiness.readinessReasons.map((reason, index) => (
+                              {bestFilesDisplayReadinessReasons.map((reason, index) => (
                                 <li key={`files-readiness-${index}`}>{reason}</li>
                               ))}
                             </ul>
@@ -1466,11 +1519,11 @@ export default function Results({
                         <p className="recommended-card-readiness">
                           Readiness: {bestBlobReadiness.readinessState}
                         </p>
-                        {bestBlobReadiness.readinessReasons?.length > 0 && (
+                        {bestBlobDisplayReadinessReasons.length > 0 && (
                           <>
                             <h5 className="recommended-card-subheading">Readiness reasons</h5>
                             <ul className="readiness-reasons-list">
-                              {bestBlobReadiness.readinessReasons.map((reason, index) => (
+                              {bestBlobDisplayReadinessReasons.map((reason, index) => (
                                 <li key={`blob-readiness-${index}`}>{reason}</li>
                               ))}
                             </ul>
@@ -1504,13 +1557,13 @@ export default function Results({
                     {bestFilesReadiness && (
                       <>
                         <p className="recommended-card-readiness">
-                          Readiness: {s3FilesCrossAssessmentEnabled ? "Ready with Condition" : bestFilesReadiness.readinessState}
+                          Readiness: {bestFilesDisplayReadinessState}
                         </p>
-                        {bestFilesReadiness.readinessReasons?.length > 0 && (
+                        {bestFilesDisplayReadinessReasons.length > 0 && (
                           <>
                             <h5 className="recommended-card-subheading">Readiness reasons</h5>
                             <ul className="readiness-reasons-list">
-                              {bestFilesReadiness.readinessReasons.map((reason, index) => (
+                              {bestFilesDisplayReadinessReasons.map((reason, index) => (
                                 <li key={`files-readiness-${index}`}>{reason}</li>
                               ))}
                             </ul>
@@ -1545,11 +1598,11 @@ export default function Results({
                   </div>
                   <p className="recommended-card-value">{alternativeTrackAOutcome.title}</p>
                   <p className="recommended-card-readiness">Readiness: Ready with Condition</p>
-                  {alternativeTrackAConditions.length > 0 && (
+                  {alternativeTrackADisplayConditions.length > 0 && (
                     <>
                       <h5 className="recommended-card-subheading">Readiness reasons</h5>
                       <ul className="readiness-reasons-list">
-                        {alternativeTrackAConditions.map((reason, index) => (
+                        {alternativeTrackADisplayConditions.map((reason, index) => (
                           <li key={`tracka-alt-condition-${index}`}>{reason}</li>
                         ))}
                       </ul>
@@ -1661,13 +1714,13 @@ export default function Results({
                     {trackBBestFilesReadiness && (
                       <>
                         <p className="recommended-card-readiness">
-                          Readiness: {s3FilesCrossAssessmentEnabled ? "Ready with Condition" : trackBBestFilesReadiness.readinessState}
+                          Readiness: {trackBBestFilesDisplayReadinessState}
                         </p>
-                        {trackBBestFilesReadiness.readinessReasons?.length > 0 && (
+                        {trackBBestFilesDisplayReadinessReasons.length > 0 && (
                           <>
                             <h5 className="recommended-card-subheading">Readiness reasons</h5>
                             <ul className="readiness-reasons-list">
-                              {trackBBestFilesReadiness.readinessReasons.map((reason, index) => (
+                              {trackBBestFilesDisplayReadinessReasons.map((reason, index) => (
                                 <li key={`trackb-files-readiness-${index}`}>{reason}</li>
                               ))}
                             </ul>
@@ -1701,11 +1754,11 @@ export default function Results({
                         <p className="recommended-card-readiness">
                           Readiness: {trackBBestBlobReadiness.readinessState}
                         </p>
-                        {trackBBestBlobReadiness.readinessReasons?.length > 0 && (
+                        {trackBBestBlobDisplayReadinessReasons.length > 0 && (
                           <>
                             <h5 className="recommended-card-subheading">Readiness reasons</h5>
                             <ul className="readiness-reasons-list">
-                              {trackBBestBlobReadiness.readinessReasons.map((reason, index) => (
+                              {trackBBestBlobDisplayReadinessReasons.map((reason, index) => (
                                 <li key={`trackb-blob-readiness-${index}`}>{reason}</li>
                               ))}
                             </ul>
@@ -1737,13 +1790,13 @@ export default function Results({
                     {trackBBestFilesReadiness && (
                       <>
                         <p className="recommended-card-readiness">
-                          Readiness: {s3FilesCrossAssessmentEnabled ? "Ready with Condition" : trackBBestFilesReadiness.readinessState}
+                          Readiness: {trackBBestFilesDisplayReadinessState}
                         </p>
-                        {trackBBestFilesReadiness.readinessReasons?.length > 0 && (
+                        {trackBBestFilesDisplayReadinessReasons.length > 0 && (
                           <>
                             <h5 className="recommended-card-subheading">Readiness reasons</h5>
                             <ul className="readiness-reasons-list">
-                              {trackBBestFilesReadiness.readinessReasons.map((reason, index) => (
+                              {trackBBestFilesDisplayReadinessReasons.map((reason, index) => (
                                 <li key={`trackb-files-readiness-${index}`}>{reason}</li>
                               ))}
                             </ul>
@@ -1778,11 +1831,11 @@ export default function Results({
                   </div>
                   <p className="recommended-card-value">{alternativeTrackBOutcome.title}</p>
                   <p className="recommended-card-readiness">Readiness: Ready with Condition</p>
-                  {alternativeTrackBConditions.length > 0 && (
+                  {alternativeTrackBDisplayConditions.length > 0 && (
                     <>
                       <h5 className="recommended-card-subheading">Readiness reasons</h5>
                       <ul className="readiness-reasons-list">
-                        {alternativeTrackBConditions.map((reason, index) => (
+                        {alternativeTrackBDisplayConditions.map((reason, index) => (
                           <li key={`trackb-alt-condition-${index}`}>{reason}</li>
                         ))}
                       </ul>
