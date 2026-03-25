@@ -9,6 +9,7 @@ const PRIMARY_WORKLOAD_VALUES = [
   "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
 ];
 const MIXED_WORKLOAD_PRESET = [10, 20, 20, 20, 30];
+const ENABLE_WORKLOAD_SPLIT_EXPERIENCE = false;
 
 const COMMON_QUESTION_IDS = [
   "nas",
@@ -33,14 +34,18 @@ const FILES_INPUT_QUESTION_IDS = [];
 const COMMON_DEFAULTS = {
   nas: "netapp",
   sourceProtocol: ["smb_v3"],
-  workloadType: MIXED_WORKLOAD_VALUE,
-  workloadTypeSelections: [...PRIMARY_WORKLOAD_VALUES, MIXED_WORKLOAD_VALUE],
+  workloadType: ENABLE_WORKLOAD_SPLIT_EXPERIENCE
+    ? MIXED_WORKLOAD_VALUE
+    : "General-purpose file shares / team shares (incl. user data shares)",
+  workloadTypeSelections: ENABLE_WORKLOAD_SPLIT_EXPERIENCE
+    ? [...PRIMARY_WORKLOAD_VALUES, MIXED_WORKLOAD_VALUE]
+    : ["General-purpose file shares / team shares (incl. user data shares)"],
   workloadDistribution: {
-    "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)": 10,
-    "Databases and stateful app components incl. logs, app state, exports, CI/CD": 20,
-    "General-purpose file shares / team shares (incl. user data shares)": 20,
-    "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)": 20,
-    "Infrequently accessed data / backup, archives retained online (compliance, historical data)": 30,
+    "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)": ENABLE_WORKLOAD_SPLIT_EXPERIENCE ? 10 : 0,
+    "Databases and stateful app components incl. logs, app state, exports, CI/CD": ENABLE_WORKLOAD_SPLIT_EXPERIENCE ? 20 : 0,
+    "General-purpose file shares / team shares (incl. user data shares)": ENABLE_WORKLOAD_SPLIT_EXPERIENCE ? 20 : 100,
+    "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)": ENABLE_WORKLOAD_SPLIT_EXPERIENCE ? 20 : 0,
+    "Infrequently accessed data / backup, archives retained online (compliance, historical data)": ENABLE_WORKLOAD_SPLIT_EXPERIENCE ? 30 : 0,
   },
   sourceShareSizeTb: "1024",
   sourceIops: "1000",
@@ -131,6 +136,18 @@ function resolveLabel(question, value) {
 }
 
 function normalizeWorkloadState(sourceAnswers = {}) {
+  if (!ENABLE_WORKLOAD_SPLIT_EXPERIENCE) {
+    const selectedWorkloadType = sourceAnswers.workloadType ?? COMMON_DEFAULTS.workloadType;
+    return {
+      workloadType: selectedWorkloadType,
+      workloadTypeSelections: [selectedWorkloadType],
+      workloadDistribution: PRIMARY_WORKLOAD_VALUES.reduce((acc, value) => {
+        acc[value] = value === selectedWorkloadType ? 100 : 0;
+        return acc;
+      }, {}),
+    };
+  }
+
   const selectedWorkloadType = sourceAnswers.workloadType ?? COMMON_DEFAULTS.workloadType;
   const existingDistribution = sourceAnswers.workloadDistribution ?? {};
   const distribution = PRIMARY_WORKLOAD_VALUES.reduce((acc, value) => {
@@ -192,6 +209,10 @@ function getDerivedWorkloadType(workloadTypeSelections = [], workloadDistributio
 }
 
 function formatWorkloadSummary(workloadTypeSelections = [], workloadDistribution = {}) {
+  if (!ENABLE_WORKLOAD_SPLIT_EXPERIENCE) {
+    return workloadTypeSelections?.[0] ?? COMMON_DEFAULTS.workloadType;
+  }
+
   const parts = PRIMARY_WORKLOAD_VALUES
     .filter((value) => Number(workloadDistribution[value]) > 0)
     .map((value) => `${value}: ${Number(workloadDistribution[value])}%`);
@@ -490,38 +511,52 @@ export default function DecisionTree({ questions, onComplete }) {
   }
 
   function handleCommonContinue() {
-    const workloadTotal = getWorkloadTotal(commonValues.workloadDistribution);
-    if (workloadTotal !== 100) {
-      window.alert("Please increase or decrease the workload percentages so the first 5 workloads total 100%.");
-      return;
+    let normalizedCommonValues;
+
+    if (ENABLE_WORKLOAD_SPLIT_EXPERIENCE) {
+      const workloadTotal = getWorkloadTotal(commonValues.workloadDistribution);
+      if (workloadTotal !== 100) {
+        window.alert("Please increase or decrease the workload percentages so the first 5 workloads total 100%.");
+        return;
+      }
+
+      const selectedPrimaryWorkloads = PRIMARY_WORKLOAD_VALUES.filter(
+        (value) => Number(commonValues.workloadDistribution?.[value]) > 0
+      );
+
+      if (selectedPrimaryWorkloads.length === 0) {
+        window.alert("Please select at least one workload and assign percentages that total 100%.");
+        return;
+      }
+
+      const derivedWorkloadType = getDerivedWorkloadType(
+        commonValues.workloadTypeSelections,
+        commonValues.workloadDistribution
+      );
+
+      normalizedCommonValues = {
+        ...commonValues,
+        workloadType: derivedWorkloadType,
+        workloadTypeSelections: [
+          ...new Set([
+            ...selectedPrimaryWorkloads,
+            ...(Array.isArray(commonValues.workloadTypeSelections)
+              && commonValues.workloadTypeSelections.includes(MIXED_WORKLOAD_VALUE)
+              ? [MIXED_WORKLOAD_VALUE]
+              : []),
+          ]),
+        ],
+      };
+    } else {
+      normalizedCommonValues = {
+        ...commonValues,
+        workloadTypeSelections: [commonValues.workloadType],
+        workloadDistribution: PRIMARY_WORKLOAD_VALUES.reduce((acc, value) => {
+          acc[value] = value === commonValues.workloadType ? 100 : 0;
+          return acc;
+        }, {}),
+      };
     }
-
-    const selectedPrimaryWorkloads = PRIMARY_WORKLOAD_VALUES.filter(
-      (value) => Number(commonValues.workloadDistribution?.[value]) > 0
-    );
-
-    if (selectedPrimaryWorkloads.length === 0) {
-      window.alert("Please select at least one workload and assign percentages that total 100%.");
-      return;
-    }
-
-    const derivedWorkloadType = getDerivedWorkloadType(
-      commonValues.workloadTypeSelections,
-      commonValues.workloadDistribution
-    );
-    const normalizedCommonValues = {
-      ...commonValues,
-      workloadType: derivedWorkloadType,
-      workloadTypeSelections: [
-        ...new Set([
-          ...selectedPrimaryWorkloads,
-          ...(Array.isArray(commonValues.workloadTypeSelections)
-            && commonValues.workloadTypeSelections.includes(MIXED_WORKLOAD_VALUE)
-            ? [MIXED_WORKLOAD_VALUE]
-            : []),
-        ]),
-      ],
-    };
 
     const prevCommon = getCommonAnswersSnapshot(answers);
     const commonChanged = JSON.stringify(prevCommon) !== JSON.stringify(normalizedCommonValues);
@@ -871,8 +906,12 @@ export default function DecisionTree({ questions, onComplete }) {
     commonValues.nas &&
     Array.isArray(commonValues.sourceProtocol) &&
     commonValues.sourceProtocol.length > 0 &&
-    getWorkloadTotal(commonValues.workloadDistribution) === 100 &&
-    PRIMARY_WORKLOAD_VALUES.some((value) => Number(commonValues.workloadDistribution?.[value] ?? 0) > 0) &&
+    (ENABLE_WORKLOAD_SPLIT_EXPERIENCE
+      ? (
+          getWorkloadTotal(commonValues.workloadDistribution) === 100
+          && PRIMARY_WORKLOAD_VALUES.some((value) => Number(commonValues.workloadDistribution?.[value] ?? 0) > 0)
+        )
+      : !!commonValues.workloadType) &&
     isPositiveNumber(commonValues.sourceShareSizeTb) &&
     isPositiveNumber(commonValues.sourceIops) &&
     isPositiveNumber(commonValues.sourceThroughputMibps) &&
@@ -944,7 +983,9 @@ export default function DecisionTree({ questions, onComplete }) {
   const showSourceDetailsStep = shouldShowSourceDetailsStep(answers);
   const showBlobInputsStep = shouldShowBlobInputsStep(answers);
   const showFilesInputsStep = shouldShowFilesInputsStep(answers);
-  const workloadTotal = getWorkloadTotal(commonValues.workloadDistribution);
+  const workloadTotal = ENABLE_WORKLOAD_SPLIT_EXPERIENCE
+    ? getWorkloadTotal(commonValues.workloadDistribution)
+    : 100;
 
   // Step number includes grouped Common, Source, Blob, and Files cards when they are part of the flow.
   const stepNumber = isCommonStep
@@ -1073,125 +1114,153 @@ export default function DecisionTree({ questions, onComplete }) {
                   </span>
                 )}
               </label>
-              <p className="multiselect-hint">Select one or more of the first 5 workloads and set each slider in 10% increments so total = 100%.</p>
+              {ENABLE_WORKLOAD_SPLIT_EXPERIENCE ? (
+                <>
+                  <p className="multiselect-hint">Select one or more of the first 5 workloads and set each slider in 10% increments so total = 100%.</p>
 
-              <div id="source-workload-type" className="workload-slider-list">
-                {visibleSourceWorkloadTypeOptions
-                  .filter((opt) => opt.value !== MIXED_WORKLOAD_VALUE)
-                  .map((opt) => {
-                    const sliderValue = Number(commonValues.workloadDistribution?.[opt.value] ?? 0);
-                    const isChecked = sliderValue > 0 || commonValues.workloadTypeSelections.includes(opt.value);
-                    return (
-                      <div key={opt.value} className="workload-slider-item">
-                        <label className={`checkbox-label${isChecked ? " checked" : ""}`}>
-                          <input
-                            type="checkbox"
-                            className="checkbox-input"
-                            checked={isChecked}
-                            onChange={() => {
-                              setCommonValues((prev) => {
-                                const currentlyChecked = Number(prev.workloadDistribution?.[opt.value] ?? 0) > 0
-                                  || prev.workloadTypeSelections.includes(opt.value);
-                                const nextDistribution = {
-                                  ...prev.workloadDistribution,
-                                  [opt.value]: currentlyChecked ? 0 : 10,
-                                };
-                                const selected = PRIMARY_WORKLOAD_VALUES.filter(
-                                  (value) => Number(nextDistribution[value]) > 0
-                                );
-                                const keepMixed = prev.workloadTypeSelections.includes(MIXED_WORKLOAD_VALUE)
-                                  && isMixedPresetDistribution(nextDistribution)
-                                  ? [MIXED_WORKLOAD_VALUE]
-                                  : [];
-                                return {
-                                  ...prev,
-                                  workloadDistribution: nextDistribution,
-                                  workloadTypeSelections: [...selected, ...keepMixed],
-                                };
-                              });
-                            }}
-                          />
-                          <span className="checkbox-text">{opt.label}</span>
-                        </label>
+                  <div id="source-workload-type" className="workload-slider-list">
+                    {visibleSourceWorkloadTypeOptions
+                      .filter((opt) => opt.value !== MIXED_WORKLOAD_VALUE)
+                      .map((opt) => {
+                        const sliderValue = Number(commonValues.workloadDistribution?.[opt.value] ?? 0);
+                        const isChecked = sliderValue > 0 || commonValues.workloadTypeSelections.includes(opt.value);
+                        return (
+                          <div key={opt.value} className="workload-slider-item">
+                            <label className={`checkbox-label${isChecked ? " checked" : ""}`}>
+                              <input
+                                type="checkbox"
+                                className="checkbox-input"
+                                checked={isChecked}
+                                onChange={() => {
+                                  setCommonValues((prev) => {
+                                    const currentlyChecked = Number(prev.workloadDistribution?.[opt.value] ?? 0) > 0
+                                      || prev.workloadTypeSelections.includes(opt.value);
+                                    const nextDistribution = {
+                                      ...prev.workloadDistribution,
+                                      [opt.value]: currentlyChecked ? 0 : 10,
+                                    };
+                                    const selected = PRIMARY_WORKLOAD_VALUES.filter(
+                                      (value) => Number(nextDistribution[value]) > 0
+                                    );
+                                    const keepMixed = prev.workloadTypeSelections.includes(MIXED_WORKLOAD_VALUE)
+                                      && isMixedPresetDistribution(nextDistribution)
+                                      ? [MIXED_WORKLOAD_VALUE]
+                                      : [];
+                                    return {
+                                      ...prev,
+                                      workloadDistribution: nextDistribution,
+                                      workloadTypeSelections: [...selected, ...keepMixed],
+                                    };
+                                  });
+                                }}
+                              />
+                              <span className="checkbox-text">{opt.label}</span>
+                            </label>
 
-                        <div className="workload-slider-control">
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="10"
-                            value={sliderValue}
-                            onChange={(e) => {
-                              const nextValue = Number(e.target.value);
-                              setCommonValues((prev) => {
-                                const nextDistribution = {
-                                  ...prev.workloadDistribution,
-                                  [opt.value]: nextValue,
-                                };
-                                const selected = PRIMARY_WORKLOAD_VALUES.filter(
-                                  (value) => Number(nextDistribution[value]) > 0
-                                );
-                                const keepMixed = prev.workloadTypeSelections.includes(MIXED_WORKLOAD_VALUE)
-                                  && isMixedPresetDistribution(nextDistribution)
-                                  ? [MIXED_WORKLOAD_VALUE]
-                                  : [];
-                                return {
-                                  ...prev,
-                                  workloadDistribution: nextDistribution,
-                                  workloadTypeSelections: [...selected, ...keepMixed],
-                                };
-                              });
-                            }}
-                          />
-                          <span className="workload-slider-value">{sliderValue}%</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                            <div className="workload-slider-control">
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                step="10"
+                                value={sliderValue}
+                                onChange={(e) => {
+                                  const nextValue = Number(e.target.value);
+                                  setCommonValues((prev) => {
+                                    const nextDistribution = {
+                                      ...prev.workloadDistribution,
+                                      [opt.value]: nextValue,
+                                    };
+                                    const selected = PRIMARY_WORKLOAD_VALUES.filter(
+                                      (value) => Number(nextDistribution[value]) > 0
+                                    );
+                                    const keepMixed = prev.workloadTypeSelections.includes(MIXED_WORKLOAD_VALUE)
+                                      && isMixedPresetDistribution(nextDistribution)
+                                      ? [MIXED_WORKLOAD_VALUE]
+                                      : [];
+                                    return {
+                                      ...prev,
+                                      workloadDistribution: nextDistribution,
+                                      workloadTypeSelections: [...selected, ...keepMixed],
+                                    };
+                                  });
+                                }}
+                              />
+                              <span className="workload-slider-value">{sliderValue}%</span>
+                            </div>
+                          </div>
+                        );
+                      })}
 
-                {visibleSourceWorkloadTypeOptions
-                  .filter((opt) => opt.value === MIXED_WORKLOAD_VALUE)
-                  .map((opt) => {
-                    const isMixedSelected = commonValues.workloadTypeSelections.includes(MIXED_WORKLOAD_VALUE);
-                    return (
-                      <label key={opt.value} className={`checkbox-label${isMixedSelected ? " checked" : ""}`}>
-                        <input
-                          type="checkbox"
-                          className="checkbox-input"
-                          checked={isMixedSelected}
-                          onChange={() => {
-                            setCommonValues((prev) => {
-                              if (prev.workloadTypeSelections.includes(MIXED_WORKLOAD_VALUE)) {
-                                return {
-                                  ...prev,
-                                  workloadTypeSelections: prev.workloadTypeSelections.filter((value) => value !== MIXED_WORKLOAD_VALUE),
-                                };
-                              }
+                    {visibleSourceWorkloadTypeOptions
+                      .filter((opt) => opt.value === MIXED_WORKLOAD_VALUE)
+                      .map((opt) => {
+                        const isMixedSelected = commonValues.workloadTypeSelections.includes(MIXED_WORKLOAD_VALUE);
+                        return (
+                          <label key={opt.value} className={`checkbox-label${isMixedSelected ? " checked" : ""}`}>
+                            <input
+                              type="checkbox"
+                              className="checkbox-input"
+                              checked={isMixedSelected}
+                              onChange={() => {
+                                setCommonValues((prev) => {
+                                  if (prev.workloadTypeSelections.includes(MIXED_WORKLOAD_VALUE)) {
+                                    return {
+                                      ...prev,
+                                      workloadTypeSelections: prev.workloadTypeSelections.filter((value) => value !== MIXED_WORKLOAD_VALUE),
+                                    };
+                                  }
 
-                              const presetDistribution = {
-                                ...prev.workloadDistribution,
-                              };
-                              PRIMARY_WORKLOAD_VALUES.forEach((value, index) => {
-                                presetDistribution[value] = MIXED_WORKLOAD_PRESET[index];
-                              });
+                                  const presetDistribution = {
+                                    ...prev.workloadDistribution,
+                                  };
+                                  PRIMARY_WORKLOAD_VALUES.forEach((value, index) => {
+                                    presetDistribution[value] = MIXED_WORKLOAD_PRESET[index];
+                                  });
 
-                              return {
-                                ...prev,
-                                workloadDistribution: presetDistribution,
-                                workloadTypeSelections: [...PRIMARY_WORKLOAD_VALUES, MIXED_WORKLOAD_VALUE],
-                              };
-                            });
-                          }}
-                        />
-                        <span className="checkbox-text">{opt.label}</span>
-                      </label>
-                    );
-                  })}
-              </div>
+                                  return {
+                                    ...prev,
+                                    workloadDistribution: presetDistribution,
+                                    workloadTypeSelections: [...PRIMARY_WORKLOAD_VALUES, MIXED_WORKLOAD_VALUE],
+                                  };
+                                });
+                              }}
+                            />
+                            <span className="checkbox-text">{opt.label}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
 
-              <p className={`question-note${workloadTotal === 100 ? "" : " region-notice"}`}>
-                Workload split total (first 5 options): {workloadTotal}%. Target is 100%.
-              </p>
+                  <p className={`question-note${workloadTotal === 100 ? "" : " region-notice"}`}>
+                    Workload split total (first 5 options): {workloadTotal}%. Target is 100%.
+                  </p>
+                </>
+              ) : (
+                <select
+                  id="source-workload-type"
+                  className="select-input"
+                  value={commonValues.workloadType}
+                  onChange={(e) => setCommonValues((prev) => ({
+                    ...prev,
+                    workloadType: e.target.value,
+                    workloadTypeSelections: [e.target.value],
+                    workloadDistribution: PRIMARY_WORKLOAD_VALUES.reduce((acc, value) => {
+                      acc[value] = value === e.target.value ? 100 : 0;
+                      return acc;
+                    }, {}),
+                  }))}
+                >
+                  {sourceWorkloadTypeQuestion?.placeholder && (
+                    <option value="" disabled>{sourceWorkloadTypeQuestion.placeholder}</option>
+                  )}
+                  {visibleSourceWorkloadTypeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="common-field common-field--full">
