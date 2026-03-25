@@ -868,6 +868,8 @@ export default function DecisionTree({ questions, onComplete }) {
     commonValues.nas &&
     Array.isArray(commonValues.sourceProtocol) &&
     commonValues.sourceProtocol.length > 0 &&
+    getWorkloadTotal(commonValues.workloadDistribution) === 100 &&
+    PRIMARY_WORKLOAD_VALUES.some((value) => Number(commonValues.workloadDistribution?.[value] ?? 0) > 0) &&
     isPositiveNumber(commonValues.sourceShareSizeTb) &&
     isPositiveNumber(commonValues.sourceIops) &&
     isPositiveNumber(commonValues.sourceThroughputMibps) &&
