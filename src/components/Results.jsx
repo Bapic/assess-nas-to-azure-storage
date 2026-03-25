@@ -131,12 +131,12 @@ function hasProtocolOrApplicationAdaptationSignal(reasons = []) {
   );
 }
 
-function getReadinessReasonsWithProtocolFixLine(readinessState, reasons = []) {
+function getReadinessReasonsWithProtocolFixLine(readinessState, reasons = [], forceInclude = false) {
   if (readinessState !== "Ready with Condition") {
     return reasons;
   }
 
-  if (!hasProtocolOrApplicationAdaptationSignal(reasons)) {
+  if (!forceInclude && !hasProtocolOrApplicationAdaptationSignal(reasons)) {
     return reasons;
   }
 
@@ -949,7 +949,8 @@ export default function Results({
     : trackBBestFilesReadiness?.readinessState;
   const bestFilesDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
     bestFilesDisplayReadinessState,
-    bestFilesReadiness?.readinessReasons ?? []
+    bestFilesReadiness?.readinessReasons ?? [],
+    s3FilesCrossAssessmentEnabled
   );
   const bestBlobDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
     bestBlobReadiness?.readinessState,
@@ -957,7 +958,8 @@ export default function Results({
   );
   const trackBBestFilesDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
     trackBBestFilesDisplayReadinessState,
-    trackBBestFilesReadiness?.readinessReasons ?? []
+    trackBBestFilesReadiness?.readinessReasons ?? [],
+    s3FilesCrossAssessmentEnabled
   );
   const trackBBestBlobDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
     trackBBestBlobReadiness?.readinessState,
