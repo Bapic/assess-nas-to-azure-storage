@@ -694,6 +694,8 @@ export default function Results({
   questions,
   onRestart,
 }) {
+  const SHOW_ADDITIONAL_TARGET_OPTION = false;
+
   const eligibleOutcomes = Array.isArray(outcomes) ? outcomes : [];
   const outcomeCatalog = Array.isArray(allOutcomes) && allOutcomes.length > 0
     ? allOutcomes
@@ -1996,7 +1998,7 @@ export default function Results({
             </section>
           </details>
 
-          {maximizeReadinessAcrossTargets && alternativeTrackAOutcome && (
+          {SHOW_ADDITIONAL_TARGET_OPTION && maximizeReadinessAcrossTargets && alternativeTrackAOutcome && (
             <details className="assessed-options-disclosure">
               <summary className="assessed-options-summary">ADDITIONAL TARGET OPTION (MAXIMISE READINESS)</summary>
               <section className="recommended-section" aria-label="Track A additional target option">
@@ -2280,7 +2282,7 @@ export default function Results({
             </details>
           )}
 
-          {maximizeReadinessAcrossTargets && alternativeTrackBOutcome && (
+          {SHOW_ADDITIONAL_TARGET_OPTION && maximizeReadinessAcrossTargets && alternativeTrackBOutcome && (
             <details className="assessed-options-disclosure">
               <summary className="assessed-options-summary">ADDITIONAL TARGET OPTION (MAXIMISE READINESS)</summary>
               <section className="recommended-section" aria-label="Track B additional target option">
