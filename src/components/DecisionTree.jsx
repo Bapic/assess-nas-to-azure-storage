@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 
 const MIXED_WORKLOAD_VALUE = "Mixed workloads";
+const AI_ML_WORKLOAD_VALUE = "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)";
+const INFREQUENT_WORKLOAD_VALUE = "Infrequently accessed data / backup, archives retained online (compliance, historical data)";
 const PRIMARY_WORKLOAD_VALUES = [
-  "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+  AI_ML_WORKLOAD_VALUE,
   "Databases and stateful app components incl. logs, app state, exports, CI/CD",
   "General-purpose file shares / team shares (incl. user data shares)",
   "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
-  "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+  INFREQUENT_WORKLOAD_VALUE,
 ];
 const MIXED_WORKLOAD_PRESET = [10, 20, 20, 20, 30];
 const ENABLE_WORKLOAD_SPLIT_EXPERIENCE = false;
@@ -36,10 +38,10 @@ const COMMON_DEFAULTS = {
   sourceProtocol: ["smb_v3"],
   workloadType: ENABLE_WORKLOAD_SPLIT_EXPERIENCE
     ? MIXED_WORKLOAD_VALUE
-    : "General-purpose file shares / team shares (incl. user data shares)",
+    : MIXED_WORKLOAD_VALUE,
   workloadTypeSelections: ENABLE_WORKLOAD_SPLIT_EXPERIENCE
     ? [...PRIMARY_WORKLOAD_VALUES, MIXED_WORKLOAD_VALUE]
-    : ["General-purpose file shares / team shares (incl. user data shares)"],
+    : [MIXED_WORKLOAD_VALUE],
   workloadDistribution: {
     "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)": ENABLE_WORKLOAD_SPLIT_EXPERIENCE ? 10 : 0,
     "Databases and stateful app components incl. logs, app state, exports, CI/CD": ENABLE_WORKLOAD_SPLIT_EXPERIENCE ? 20 : 0,
@@ -463,6 +465,35 @@ export default function DecisionTree({ questions, onComplete }) {
     }, 50);
   }, [isCommonStep, isSourceDetailsStep, isBlobInputsStep, isFilesInputsStep]);
 
+  const selectedWorkloadType = commonValues.workloadType;
+  const isInfrequentWorkloadSelected = selectedWorkloadType === INFREQUENT_WORKLOAD_VALUE;
+  const isAiMlWorkloadSelected = selectedWorkloadType === AI_ML_WORKLOAD_VALUE;
+  const isBlobAccessFrequencyLocked = isInfrequentWorkloadSelected || isAiMlWorkloadSelected;
+  const lockedBlobAccessFrequency = isInfrequentWorkloadSelected
+    ? "archive"
+    : SOURCE_DETAILS_DEFAULTS.blobAccessFrequency;
+
+  useEffect(() => {
+    if (!isSourceDetailsStep) return;
+    if (!sourceDetailsValues.targetService.includes("blobs")) return;
+    if (!isBlobAccessFrequencyLocked) return;
+
+    setSourceDetailsValues((prev) => {
+      if (prev.blobAccessFrequency === lockedBlobAccessFrequency) {
+        return prev;
+      }
+      return {
+        ...prev,
+        blobAccessFrequency: lockedBlobAccessFrequency,
+      };
+    });
+  }, [
+    isSourceDetailsStep,
+    isBlobAccessFrequencyLocked,
+    lockedBlobAccessFrequency,
+    sourceDetailsValues.targetService,
+  ]);
+
   function advance(value) {
     if (!question) return;
 
@@ -502,12 +533,24 @@ export default function DecisionTree({ questions, onComplete }) {
   }
 
   function toggleTargetService(value) {
-    setSourceDetailsValues((prev) => ({
-      ...prev,
-      targetService: prev.targetService.includes(value)
+    setSourceDetailsValues((prev) => {
+      const hasValue = prev.targetService.includes(value);
+      const nextTargetService = hasValue
         ? prev.targetService.filter((service) => service !== value)
-        : [...prev.targetService, value],
-    }));
+        : [...prev.targetService, value];
+
+      // Reapply default Files SKU selection when Files is added back.
+      const nextFilesMediaType =
+        value === "files" && !hasValue && (!Array.isArray(prev.filesMediaType) || prev.filesMediaType.length === 0)
+          ? [...SOURCE_DETAILS_DEFAULTS.filesMediaType]
+          : prev.filesMediaType;
+
+      return {
+        ...prev,
+        targetService: nextTargetService,
+        filesMediaType: nextFilesMediaType,
+      };
+    });
   }
 
   function handleCommonContinue() {
@@ -923,7 +966,9 @@ export default function DecisionTree({ questions, onComplete }) {
     sourceDetailsValues.redundancy &&
     Array.isArray(sourceDetailsValues.targetService) &&
     sourceDetailsValues.targetService.length > 0 &&
-    (!sourceDetailsValues.targetService.includes("blobs") || sourceDetailsValues.blobAccessFrequency);
+    (!sourceDetailsValues.targetService.includes("blobs") || sourceDetailsValues.blobAccessFrequency) &&
+    (!sourceDetailsValues.targetService.includes("files")
+      || (Array.isArray(sourceDetailsValues.filesMediaType) && sourceDetailsValues.filesMediaType.length > 0));
 
   const isBlobInputsValid =
     blobInputValues.blobAccessFrequency;
@@ -969,6 +1014,7 @@ export default function DecisionTree({ questions, onComplete }) {
     redundancyQuestion ? resolveLabel(redundancyQuestion, answers.redundancy) : "",
     targetServiceQuestion ? resolveLabel(targetServiceQuestion, answers.targetService) : "",
     blobAccessFrequencyQuestion ? resolveLabel(blobAccessFrequencyQuestion, answers.blobAccessFrequency) : "",
+    filesMediaTypeQuestion ? resolveLabel(filesMediaTypeQuestion, answers.filesMediaType) : "",
     answers.maximizeReadinessAcrossTargets ? "Maximise readiness enabled" : "Maximise readiness disabled",
   ].filter(Boolean).join(" | ");
 
@@ -1317,7 +1363,7 @@ export default function DecisionTree({ questions, onComplete }) {
             <div className="common-field common-field--full">
               <label className="common-field-label" htmlFor="comfort-factor">
                 {comfortFactorQuestion?.text}
-                <span className="field-tag field-tag-meta">{DISCOVERED_METADATA_TAG}</span>
+                <span className="field-tag field-tag-user">{USER_INPUT_TAG}</span>
               </label>
               <select
                 id="comfort-factor"
@@ -1453,6 +1499,7 @@ export default function DecisionTree({ questions, onComplete }) {
                   id="blob-access-frequency"
                   className="select-input"
                   value={sourceDetailsValues.blobAccessFrequency}
+                  disabled={isBlobAccessFrequencyLocked}
                   onChange={(e) => setSourceDetailsValues((prev) => ({ ...prev, blobAccessFrequency: e.target.value }))}
                 >
                   {blobAccessFrequencyQuestion?.placeholder && (
@@ -1464,6 +1511,44 @@ export default function DecisionTree({ questions, onComplete }) {
                     </option>
                   ))}
                 </select>
+                {isInfrequentWorkloadSelected && (
+                  <p className="question-note">
+                    Access frequency is fixed to Hardly/Never for Infrequently used workload.
+                  </p>
+                )}
+                {isAiMlWorkloadSelected && (
+                  <p className="question-note">
+                    Access frequency remains at default for AI/ML workload.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {sourceDetailsValues.targetService.includes("files") && (
+              <div className="common-field common-field--full">
+                <p className="common-field-label">
+                  {filesMediaTypeQuestion?.text}
+                  <span className="field-tag field-tag-user">{USER_INPUT_TAG}</span>
+                </p>
+                <p className="multiselect-hint">Select all that apply</p>
+                <div className="checkbox-list common-checkbox-list">
+                  {visibleFilesMediaOptions.map((opt) => (
+                    <label key={opt.value} className={`checkbox-label${sourceDetailsValues.filesMediaType.includes(opt.value) ? " checked" : ""}`}>
+                      <input
+                        type="checkbox"
+                        className="checkbox-input"
+                        checked={sourceDetailsValues.filesMediaType.includes(opt.value)}
+                        onChange={() => setSourceDetailsValues((prev) => ({
+                          ...prev,
+                          filesMediaType: prev.filesMediaType.includes(opt.value)
+                            ? prev.filesMediaType.filter((value) => value !== opt.value)
+                            : [...prev.filesMediaType, opt.value],
+                        }))}
+                      />
+                      <span className="checkbox-text">{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             )}
 

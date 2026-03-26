@@ -194,28 +194,16 @@ export const questions = [
     tooltip: "Used only for calculating IO transactions for Azure Blob.",
     options: [
       {
-        label: "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
+        label: "Mixed workloads (various workloads combinations)",
+        value: "Mixed workloads",
+      },
+      {
+        label: "AI/ML workloads (training, features etc.)",
         value: "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
       },
       {
-        label: "Databases and stateful app components incl. logs, app state, exports, CI/CD",
-        value: "Databases and stateful app components incl. logs, app state, exports, CI/CD",
-      },
-      {
-        label: "General-purpose file shares / team shares (incl. user data shares)",
-        value: "General-purpose file shares / team shares (incl. user data shares)",
-      },
-      {
-        label: "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
-        value: "Hybrid file services with Azure File Sync (on-prem cache handles performance; cloud tier for durability/scale)",
-      },
-      {
-        label: "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
+        label: "Infrequently used (archive, backup)",
         value: "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
-      },
-      {
-        label: "Mixed workloads",
-        value: "Mixed workloads",
       },
     ],
   },

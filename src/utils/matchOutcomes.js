@@ -283,7 +283,6 @@ export function getEligibleOutcomes(outcomes, answers) {
   const selectedRegion = answers.region;
   const selectedServices = answers.targetService; // array | undefined
   const selectedRedundancy = answers.redundancy;   // string | undefined
-  const sourceNas = String(answers?.nas ?? "").toLowerCase();
   const sourceProtocolValues = Array.isArray(answers?.sourceProtocol)
     ? answers.sourceProtocol.map((value) => String(value).toLowerCase())
     : [String(answers?.sourceProtocol ?? "").toLowerCase()];
@@ -298,25 +297,12 @@ export function getEligibleOutcomes(outcomes, answers) {
   const sourceHasNfsV41 =
     sourceProtocolValues.includes("nfs_v41") || sourceProtocolJoined.includes("nfs_v41");
   const sourceHasNfs = sourceHasNfsV3 || sourceHasNfsV41 || sourceProtocolJoined.includes("nfs");
-  const isNetAppOrDellSource = sourceNas === "netapp" || sourceNas === "dell";
   const blobProtocolSupported = sourceHasS3 || sourceHasNfsV3;
   const filesProtocolSupported = sourceHasSmb || sourceHasNfsV41;
   const selectedServicesList = Array.isArray(selectedServices) ? selectedServices : [];
-  const filesSelected = selectedServicesList.includes("files");
-  const blobsSelected = selectedServicesList.includes("blobs");
-  const filesCrossAssessmentEnabled =
-    isNetAppOrDellSource && (sourceHasS3 || sourceHasNfsV3);
-  const autoIncludeBlobForProtocolPriority =
-    filesSelected && blobProtocolSupported && !blobsSelected;
-  const autoIncludeFilesForCrossAssessment =
-    blobsSelected && filesCrossAssessmentEnabled && !filesSelected;
-  const effectiveServices = autoIncludeBlobForProtocolPriority
-    ? [...new Set([...selectedServicesList, "blobs"])]
-    : selectedServicesList;
-  const effectiveServicesWithFiles = autoIncludeFilesForCrossAssessment
-    ? [...new Set([...effectiveServices, "files"])]
-    : effectiveServices;
-  const forcedBlobAccessFrequency = autoIncludeBlobForProtocolPriority ? "hot" : null;
+  const filesCrossAssessmentEnabled = false;
+  const effectiveServicesWithFiles = selectedServicesList;
+  const forcedBlobAccessFrequency = null;
   const blobTierRegionAdjustment = getBlobTierRegionAdjustment(answers);
   const filesSkuRegionAdjustment = getFilesSkuRegionAdjustment(answers);
   const filesPerformanceEligibility = getFilesPerformanceSkuEligibility(answers);
@@ -517,26 +503,43 @@ export function getTrackBSelection(outcomes, answers, trackAEligibleOutcomes = [
     : [String(answers?.sourceProtocol ?? "").toLowerCase()];
   const sourceHasS3 = sourceProtocolValues.includes("s3");
   const sourceHasNfsV3 = sourceProtocolValues.includes("nfs_v3");
-  const autoIncludeBlobForProtocolPriority =
-    selectedServices.includes("files") && (sourceHasS3 || sourceHasNfsV3) && !selectedServices.includes("blobs");
-  const effectiveServices = autoIncludeBlobForProtocolPriority
-    ? [...new Set([...selectedServices, "blobs"])]
-    : selectedServices;
-  const autoIncludeFilesForS3CrossAssessment =
-    selectedServices.includes("blobs")
-    && !selectedServices.includes("files")
-    && (sourceHasS3 || sourceHasNfsV3)
-    && (sourceNas === "netapp" || sourceNas === "dell");
-  const effectiveServicesWithFiles = autoIncludeFilesForS3CrossAssessment
-    ? [...new Set([...effectiveServices, "files"])]
-    : effectiveServices;
+  const sourceHasNfsV41 = sourceProtocolValues.includes("nfs_v41");
+  const effectiveServicesWithFiles = selectedServices;
   const allowedByService = new Set(effectiveServicesWithFiles.flatMap((svc) => serviceOutcomeMap[svc] ?? []));
+  const filesSkuRegionAdjustment = getFilesSkuRegionAdjustment(answers);
+  const filesPerformanceEligibility = getFilesPerformanceSkuEligibility(answers);
+  const selectedFilesMediaOutcomes = answers?.filesMediaType
+    ? filesSkuRegionAdjustment?.appliedOutcomeIds ?? toFilesOutcomeIds(answers.filesMediaType)
+    : [];
 
   const { row: preferredRow, canonicalProtocol, canonicalProtocolKey } = findPreferredChoiceRow(answers);
   const preferredOutcomeIds = [
     preferredRow?.preferredBlobOutcomeId,
     preferredRow?.preferredFilesOutcomeId,
-  ].filter(Boolean);
+  ].filter((outcomeId) => {
+    if (!outcomeId) return false;
+    if (!filesOutcomeIds.includes(outcomeId)) return true;
+
+    if (
+      selectedFilesMediaOutcomes.length > 0
+      && !selectedFilesMediaOutcomes.includes(outcomeId)
+    ) {
+      return false;
+    }
+
+    if (!filesPerformanceEligibility.allowedOutcomeIds.includes(outcomeId)) {
+      return false;
+    }
+
+    const sourceHasNfs = sourceHasNfsV3 || sourceHasNfsV41;
+    const filesCrossAssessmentEnabled =
+      (sourceNas === "netapp" || sourceNas === "dell") && (sourceHasS3 || sourceHasNfsV3);
+    if (sourceHasNfs && outcomeId === "files-standard-hdd" && !filesCrossAssessmentEnabled) {
+      return false;
+    }
+
+    return true;
+  });
 
   const preferredByService = {
     blob: preferredOutcomeIds.find((id) => blobOutcomeIds.includes(id)) ?? null,
