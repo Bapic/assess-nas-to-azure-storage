@@ -1490,14 +1490,10 @@ export default function Results({
   const recommendationTieBannerText = "In the real app, two SKUs form same service or different service with same weightage/status will rank the one with least cost. Options are available for you to choose considering workload suitability, protocol adaptions, application compatibility checks and necessary POCs before migration.";
   const protocolContextBannerLine1 = "NetApp ONTAP AFF and NetApp ONTAP FAS NAS appliances are a File system based architecture that exposes various shares supporting multiple protocols including NFS v3 and S3. Hence NFS v3 and S3 shares are also assessed as another shares against Azure Files and performance and scale targets were applied. In some scenarios, you can also implement sharding on Azure Files shares to meet scalability requirements across Azure file shares.";
   const protocolContextBannerLine2 = "In the current case you may see Azure Blob as recommended, when source protocol is either NFS v3 or S3, purely because of protocol support and object type access. You can review Azure Files path SKU suitability and create your migration plan accordingly.";
-  const isInfrequentWorkloadType =
-    answers?.workloadType === "Infrequently accessed data / backup, archives retained online (compliance, historical data)";
-  const isAiMlWorkloadType =
-    answers?.workloadType === "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)";
-  const shouldPrioritizeBlobInRecommended = isInfrequentWorkloadType || isAiMlWorkloadType;
+  const shouldPrioritizeBlobInTrackARecommended = effectiveBlobAccessFrequency === "archive";
 
-  function applyInfrequentWorkloadBlobPriority(basePriority, candidateType, isBlobAlternative = false) {
-    if (!shouldPrioritizeBlobInRecommended) return basePriority;
+  function applyTrackABlobPriorityForArchiveAccess(basePriority, candidateType, isBlobAlternative = false) {
+    if (!shouldPrioritizeBlobInTrackARecommended) return basePriority;
     if (candidateType === "blob" || (candidateType === "alt" && isBlobAlternative)) {
       return basePriority - 10;
     }
@@ -1508,7 +1504,7 @@ export default function Results({
     ...(effectiveFilesSelected && bestFilesOutcome
       ? [{
           type: "files",
-          priority: applyInfrequentWorkloadBlobPriority(getRecommendedCardPriority({
+          priority: applyTrackABlobPriorityForArchiveAccess(getRecommendedCardPriority({
             readinessState: bestFilesDisplayReadinessState,
             isRecommended: true,
             isReadinessMaximised: false,
@@ -1518,7 +1514,7 @@ export default function Results({
     ...(effectiveBlobsSelected && bestBlobOutcome
       ? [{
           type: "blob",
-          priority: applyInfrequentWorkloadBlobPriority(getRecommendedCardPriority({
+          priority: applyTrackABlobPriorityForArchiveAccess(getRecommendedCardPriority({
             readinessState: bestBlobReadiness?.readinessState,
             isRecommended: true,
             isReadinessMaximised: false,
@@ -1528,7 +1524,7 @@ export default function Results({
     ...(alternativeTrackAOutcome
       ? [{
           type: "alt",
-          priority: applyInfrequentWorkloadBlobPriority(getRecommendedCardPriority({
+          priority: applyTrackABlobPriorityForArchiveAccess(getRecommendedCardPriority({
             readinessState: "Ready with Condition",
             isRecommended: false,
             isReadinessMaximised: true,
@@ -1555,31 +1551,31 @@ export default function Results({
     ...(effectiveFilesSelected && trackBBestFilesOutcome
       ? [{
           type: "files",
-          priority: applyInfrequentWorkloadBlobPriority(getRecommendedCardPriority({
+          priority: getRecommendedCardPriority({
             readinessState: trackBBestFilesDisplayReadinessState,
             isRecommended: true,
             isReadinessMaximised: false,
-          }), "files"),
+          }),
         }]
       : []),
     ...(effectiveBlobsSelected && trackBBestBlobOutcome
       ? [{
           type: "blob",
-          priority: applyInfrequentWorkloadBlobPriority(getRecommendedCardPriority({
+          priority: getRecommendedCardPriority({
             readinessState: trackBBestBlobReadiness?.readinessState,
             isRecommended: true,
             isReadinessMaximised: false,
-          }), "blob"),
+          }),
         }]
       : []),
     ...(alternativeTrackBOutcome
       ? [{
           type: "alt",
-          priority: applyInfrequentWorkloadBlobPriority(getRecommendedCardPriority({
+          priority: getRecommendedCardPriority({
             readinessState: "Ready with Condition",
             isRecommended: false,
             isReadinessMaximised: true,
-          }), "alt", blobOutcomeSet.has(alternativeTrackBOutcome.id)),
+          }),
         }]
       : []),
   ];

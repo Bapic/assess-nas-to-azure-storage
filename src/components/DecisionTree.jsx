@@ -61,7 +61,7 @@ const SOURCE_DETAILS_DEFAULTS = {
   redundancy: "lrs",
   targetService: ["blobs", "files"],
   blobAccessFrequency: "hot",
-  filesMediaType: ["ssd", "hdd"],
+  filesMediaType: ["ssd"],
   maximizeReadinessAcrossTargets: true,
 };
 
@@ -71,7 +71,7 @@ const BLOB_INPUT_DEFAULTS = {
 };
 
 const FILES_INPUT_DEFAULTS = {
-  filesMediaType: ["ssd", "hdd"],
+  filesMediaType: ["ssd"],
 };
 
 /** Pull the first selectable value out of flat or grouped options. */
@@ -329,6 +329,9 @@ export default function DecisionTree({ questions, onComplete }) {
           ? getDefaultMultiValues(filesMediaQuestion)
           : SOURCE_DETAILS_DEFAULTS.filesMediaType)
       : SOURCE_DETAILS_DEFAULTS.filesMediaType;
+    const defaultBlobAccessFrequency = sourceAnswers.workloadType === INFREQUENT_WORKLOAD_VALUE
+      ? "cold"
+      : SOURCE_DETAILS_DEFAULTS.blobAccessFrequency;
 
     return {
       region: sourceAnswers.region ?? SOURCE_DETAILS_DEFAULTS.region,
@@ -336,13 +339,12 @@ export default function DecisionTree({ questions, onComplete }) {
       targetService: Array.isArray(sourceAnswers.targetService)
         ? sourceAnswers.targetService
         : SOURCE_DETAILS_DEFAULTS.targetService,
-      blobAccessFrequency: sourceAnswers.blobAccessFrequency ?? SOURCE_DETAILS_DEFAULTS.blobAccessFrequency,
+      blobAccessFrequency: sourceAnswers.blobAccessFrequency ?? defaultBlobAccessFrequency,
       filesMediaType: Array.isArray(sourceAnswers.filesMediaType)
         ? sourceAnswers.filesMediaType
         : (sourceAnswers.filesMediaType ? [sourceAnswers.filesMediaType] : defaultFilesMedia),
-      maximizeReadinessAcrossTargets:
-        sourceAnswers.maximizeReadinessAcrossTargets
-        ?? SOURCE_DETAILS_DEFAULTS.maximizeReadinessAcrossTargets,
+      // Hidden in Step 2 UI; keep enabled so readiness-maximized path remains active.
+      maximizeReadinessAcrossTargets: true,
     };
   }
 
@@ -464,35 +466,6 @@ export default function DecisionTree({ questions, onComplete }) {
       activeRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }, 50);
   }, [isCommonStep, isSourceDetailsStep, isBlobInputsStep, isFilesInputsStep]);
-
-  const selectedWorkloadType = commonValues.workloadType;
-  const isInfrequentWorkloadSelected = selectedWorkloadType === INFREQUENT_WORKLOAD_VALUE;
-  const isAiMlWorkloadSelected = selectedWorkloadType === AI_ML_WORKLOAD_VALUE;
-  const isBlobAccessFrequencyLocked = isInfrequentWorkloadSelected || isAiMlWorkloadSelected;
-  const lockedBlobAccessFrequency = isInfrequentWorkloadSelected
-    ? "archive"
-    : SOURCE_DETAILS_DEFAULTS.blobAccessFrequency;
-
-  useEffect(() => {
-    if (!isSourceDetailsStep) return;
-    if (!sourceDetailsValues.targetService.includes("blobs")) return;
-    if (!isBlobAccessFrequencyLocked) return;
-
-    setSourceDetailsValues((prev) => {
-      if (prev.blobAccessFrequency === lockedBlobAccessFrequency) {
-        return prev;
-      }
-      return {
-        ...prev,
-        blobAccessFrequency: lockedBlobAccessFrequency,
-      };
-    });
-  }, [
-    isSourceDetailsStep,
-    isBlobAccessFrequencyLocked,
-    lockedBlobAccessFrequency,
-    sourceDetailsValues.targetService,
-  ]);
 
   function advance(value) {
     if (!question) return;
@@ -1499,7 +1472,6 @@ export default function DecisionTree({ questions, onComplete }) {
                   id="blob-access-frequency"
                   className="select-input"
                   value={sourceDetailsValues.blobAccessFrequency}
-                  disabled={isBlobAccessFrequencyLocked}
                   onChange={(e) => setSourceDetailsValues((prev) => ({ ...prev, blobAccessFrequency: e.target.value }))}
                 >
                   {blobAccessFrequencyQuestion?.placeholder && (
@@ -1511,16 +1483,6 @@ export default function DecisionTree({ questions, onComplete }) {
                     </option>
                   ))}
                 </select>
-                {isInfrequentWorkloadSelected && (
-                  <p className="question-note">
-                    Access frequency is fixed to Hardly/Never for Infrequently used workload.
-                  </p>
-                )}
-                {isAiMlWorkloadSelected && (
-                  <p className="question-note">
-                    Access frequency remains at default for AI/ML workload.
-                  </p>
-                )}
               </div>
             )}
 
@@ -1552,23 +1514,6 @@ export default function DecisionTree({ questions, onComplete }) {
               </div>
             )}
 
-            <div className="common-field common-field--full">
-              <label className={`checkbox-label${sourceDetailsValues.maximizeReadinessAcrossTargets ? " checked" : ""}`}>
-                <input
-                  type="checkbox"
-                  className="checkbox-input"
-                  checked={sourceDetailsValues.maximizeReadinessAcrossTargets}
-                  onChange={(e) => setSourceDetailsValues((prev) => ({
-                    ...prev,
-                    maximizeReadinessAcrossTargets: e.target.checked,
-                  }))}
-                />
-                <span className="checkbox-text">Maximise readiness across target services</span>
-              </label>
-              <p className="question-note">
-                When enabled, an additional alternative target option is shown as Ready with Condition with protocol/application adaptation guidance.
-              </p>
-            </div>
           </div>
 
           <button
