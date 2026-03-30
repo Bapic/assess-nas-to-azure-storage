@@ -772,7 +772,7 @@ export default function Results({
     ?? null;
   const effectiveBlobsSelected = blobsSelected;
   const showRecommendedSection = effectiveFilesSelected || effectiveBlobsSelected;
-  const showTrackB = false;
+  const showTrackB = getTrackBVisibilityFlag();
   const maximizeReadinessAcrossTargets = answers?.maximizeReadinessAcrossTargets !== false;
   const prioritizeFilesBeforeBlob = sourceNas === "netapp" || sourceNas === "dell";
   const prioritizePremiumFilesForNfs = sourceHasNfs;
