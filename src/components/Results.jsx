@@ -161,16 +161,6 @@ function getReadinessBadgeClass(readinessState) {
   return "readiness-badge readiness-badge-not-ready";
 }
 
-function getComparisonBadgeClass(status) {
-  if (status === "Match") return "comparison-badge comparison-badge-match";
-  if (status === "Preferred Override") return "comparison-badge comparison-badge-override";
-  return "comparison-badge comparison-badge-nomapping";
-}
-
-function isToggleEnabled(value) {
-  return ["1", "true", "yes", "on"].includes(String(value ?? "").toLowerCase());
-}
-
 function evaluateOutcomeReadiness({
   outcome,
   answers,
@@ -671,8 +661,6 @@ export default function Results({
   outcomes,
   trackBOutcomes,
   trackBPreferredByService,
-  trackBPreferredRow,
-  trackBCanonicalProtocol,
   trackBMatchedPreferredToTrackA,
   allOutcomes,
   answers,
@@ -885,100 +873,10 @@ export default function Results({
     ? readinessByOutcomeId.get(bestFilesOutcome.id)
     : null;
 
-  const trackBEligibleOutcomes = Array.isArray(trackBOutcomes) ? trackBOutcomes : [];
-  const trackBOutcomeIdSet = new Set(trackBEligibleOutcomes.map((outcome) => outcome.id));
-  if (trackBPreferredByService?.blob && allowedByService.has(trackBPreferredByService.blob)) {
-    trackBOutcomeIdSet.add(trackBPreferredByService.blob);
-  }
-  if (trackBPreferredByService?.files && allowedByService.has(trackBPreferredByService.files)) {
-    trackBOutcomeIdSet.add(trackBPreferredByService.files);
-  }
-  const trackBEvaluatedOutcomes = outcomeCatalog.filter((outcome) => trackBOutcomeIdSet.has(outcome.id));
-
-  const trackBReadinessByOutcomeId = new Map(
-    trackBEvaluatedOutcomes.map((outcome) => {
-      const readiness = evaluateOutcomeReadiness({
-        outcome,
-        answers,
-        trackMode: "B",
-        preferredOverrideOutcomeIds: trackBPreferredOverrideOutcomeIds,
-        selectedRegion: answers?.region,
-        selectedRedundancy,
-        allowedByService,
-        sourceHasSmb,
-        sourceHasS3,
-        sourceHasNfs,
-        sourceHasNfsV3,
-        sourceHasNfsV41,
-        blobProtocolSupported,
-        filesProtocolSupported,
-        effectiveBlobAccessFrequency,
-        blobTierRegionAdjustment,
-        selectedFilesMediaOutcomes,
-        filesPerformanceEligibility,
-        filesSkuRegionAdjustment,
-        redundancyLabelMap,
-        blobTierLabelMap,
-        filesSkuLabelMap,
-        s3FilesCrossAssessmentMode: s3FilesCrossAssessmentEnabled && filesOutcomeSet.has(outcome.id),
-      });
-      return [outcome.id, readiness];
-    })
-  );
-
-  const trackBHasReadyOrConditionalOutcome = trackBEvaluatedOutcomes.some((outcome) => {
-    const readiness = trackBReadinessByOutcomeId.get(outcome.id);
-    return readiness && readiness.readinessState !== "Not Ready";
-  });
-
   const orderedEvaluatedOutcomes = sortOutcomeCards(evaluatedOutcomes);
-  const orderedTrackBEvaluatedOutcomes = sortOutcomeCards(trackBEvaluatedOutcomes);
-
-  const trackBEligibleBlobOutcomes = trackBEligibleOutcomes.filter((outcome) => blobOutcomeSet.has(outcome.id));
-  const trackBEligibleFilesOutcomes = trackBEligibleOutcomes.filter((outcome) => filesOutcomeSet.has(outcome.id));
-  const trackBFallbackBlobOutcome = getBestOutcomeByRank(trackBEligibleBlobOutcomes, blobOutcomeRank);
-  const trackBFallbackFilesOutcome = getBestOutcomeByRank(trackBEligibleFilesOutcomes, filesOutcomeRank);
-  const trackBMultipleFilesEligible = trackBEligibleFilesOutcomes.length > 1;
-  const trackBPreferredSsdOverrideApplies =
-    trackBMultipleFilesEligible
-    && preferredFilesOutcome?.id === "files-premium-ssd"
-    && trackBEligibleFilesOutcomes.some((outcome) => outcome.id === "files-premium-ssd");
-  const trackBRecommendedBlobOutcome = getBestOutcomeByReadinessThenRank(
-    trackBEligibleBlobOutcomes,
-    blobOutcomeRank,
-    trackBReadinessByOutcomeId
-  );
-  const trackBRecommendedFilesOutcome = getBestOutcomeByReadinessThenRank(
-    trackBEligibleFilesOutcomes,
-    filesOutcomeRank,
-    trackBReadinessByOutcomeId
-  );
-  const trackBRecommendedFilesOutcomeLowerFirst = prioritizePremiumFilesForNfs
-    ? null
-    : getFilesOutcomeByLowerSkuEscalation(
-        trackBEligibleFilesOutcomes,
-        filesOutcomeRank,
-        trackBReadinessByOutcomeId
-      );
-  const trackBBestBlobOutcome = trackBRecommendedBlobOutcome ?? preferredBlobOutcome ?? trackBFallbackBlobOutcome;
-  const trackBBestFilesOutcome = trackBPreferredSsdOverrideApplies
-    ? preferredFilesOutcome
-    : trackBRecommendedFilesOutcomeLowerFirst
-      ?? trackBRecommendedFilesOutcome
-      ?? preferredFilesOutcome
-      ?? trackBFallbackFilesOutcome;
-  const trackBBestBlobReadiness = trackBBestBlobOutcome
-    ? trackBReadinessByOutcomeId.get(trackBBestBlobOutcome.id)
-    : null;
-  const trackBBestFilesReadiness = trackBBestFilesOutcome
-    ? trackBReadinessByOutcomeId.get(trackBBestFilesOutcome.id)
-    : null;
   const bestFilesDisplayReadinessState = s3FilesCrossAssessmentEnabled
     ? "Ready with Condition"
     : bestFilesReadiness?.readinessState;
-  const trackBBestFilesDisplayReadinessState = s3FilesCrossAssessmentEnabled
-    ? "Ready with Condition"
-    : trackBBestFilesReadiness?.readinessState;
   const bestFilesDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
     bestFilesDisplayReadinessState,
     bestFilesReadiness?.readinessReasons ?? [],
@@ -987,15 +885,6 @@ export default function Results({
   const bestBlobDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
     bestBlobReadiness?.readinessState,
     bestBlobReadiness?.readinessReasons ?? []
-  );
-  const trackBBestFilesDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
-    trackBBestFilesDisplayReadinessState,
-    trackBBestFilesReadiness?.readinessReasons ?? [],
-    s3FilesCrossAssessmentEnabled
-  );
-  const trackBBestBlobDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
-    trackBBestBlobReadiness?.readinessState,
-    trackBBestBlobReadiness?.readinessReasons ?? []
   );
 
   const blobRecommendationReasons = effectiveBlobsSelected
@@ -1027,80 +916,7 @@ export default function Results({
       })
     : [];
 
-  const trackBBlobRecommendationReasons = effectiveBlobsSelected
-    ? getBlobRecommendationReasons({
-        answers,
-        bestBlobOutcome: trackBBestBlobOutcome,
-        eligibleBlobOutcomes: trackBEligibleBlobOutcomes,
-        autoIncludedBlobForProtocolPriority,
-        blobTierRegionAdjustment,
-        blobTierLabelMap,
-        redundancyLabelMap,
-        getOutcomeRedundancyAdjustment,
-      })
-    : [];
-
-  const trackBFilesRecommendationReasons = effectiveFilesSelected
-    ? getFilesRecommendationReasons({
-        answers,
-        bestFilesOutcome: trackBBestFilesOutcome,
-        eligibleFilesOutcomes: trackBEligibleFilesOutcomes,
-        preferredChoiceOverrideApplies: trackBPreferredSsdOverrideApplies,
-        preferLowerSkuFirst: !trackBPreferredSsdOverrideApplies && !prioritizePremiumFilesForNfs,
-        s3FilesCrossAssessmentMode: s3FilesCrossAssessmentEnabled,
-        filesSkuRegionAdjustment,
-        filesPerformanceEligibility,
-        filesSkuLabelMap,
-        redundancyLabelMap,
-        getOutcomeRedundancyAdjustment,
-      })
-    : [];
-
-  const trackBBlobAccessFrequencyLockReason =
-    answers?.workloadType === "Infrequently accessed data / backup, archives retained online (compliance, historical data)"
-      ? "Access frequency was locked by workload selection: Infrequently used maps to Blob Hardly/Never (Archive tier)."
-      : answers?.workloadType === "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)"
-        ? "Access frequency was locked by workload selection: AI/ML keeps the default Blob access frequency (Hot tier)."
-        : null;
-
-  if (trackBBlobAccessFrequencyLockReason && effectiveBlobsSelected) {
-    trackBBlobRecommendationReasons.unshift(trackBBlobAccessFrequencyLockReason);
-  }
-
-  if (trackBPreferredRow) {
-    const matrixContext = `Preferred-choice matrix matched Workload type \"${trackBPreferredRow.workloadType}\" + Source protocol \"${trackBCanonicalProtocol || trackBPreferredRow.sourceProtocolLabel}\".`;
-    if (effectiveBlobsSelected) trackBBlobRecommendationReasons.unshift(matrixContext);
-    if (effectiveFilesSelected) trackBFilesRecommendationReasons.unshift(matrixContext);
-  } else {
-    const fallbackContext = "No preferred-choice matrix row matched this workload/protocol combination, so Track B fell back to Track A suitability logic.";
-    if (effectiveBlobsSelected) trackBBlobRecommendationReasons.unshift(fallbackContext);
-    if (effectiveFilesSelected) trackBFilesRecommendationReasons.unshift(fallbackContext);
-  }
-
-  if (trackBPreferredByService?.blob && bestBlobOutcome?.id) {
-    if (trackBMatchedPreferredToTrackA?.blob === true) {
-      trackBBlobRecommendationReasons.unshift("Track A and preferred-choice mapping are aligned for Blob recommendation.");
-    } else if (trackBMatchedPreferredToTrackA?.blob === false) {
-      trackBBlobRecommendationReasons.unshift("Track B mismatch detected against Track A for Blob; recommended outcome is now selected by readiness priority (Ready, then Ready with Condition), while preferred outcome remains listed in Track B SKU details.");
-    }
-  }
-
-  if (trackBPreferredByService?.files && bestFilesOutcome?.id) {
-    if (trackBMatchedPreferredToTrackA?.files === true) {
-      trackBFilesRecommendationReasons.unshift("Track A and preferred-choice mapping are aligned for Azure Files recommendation.");
-    } else if (trackBMatchedPreferredToTrackA?.files === false) {
-      trackBFilesRecommendationReasons.unshift("Track B mismatch detected against Track A for Azure Files; recommended outcome is now selected by readiness priority (Ready, then Ready with Condition), while preferred outcome remains listed in Track B SKU details.");
-    }
-  }
-
-  if (trackBPreferredSsdOverrideApplies) {
-    trackBFilesRecommendationReasons.unshift(
-      "Preferred-choice mapping explicitly recommends Azure Files Premium SSD for this workload/protocol combination. Since multiple Azure Files SKUs are eligible, Premium SSD is selected in Track B Recommended section."
-    );
-  }
-
   const trackABlobRecommendationReasonsFull = blobRecommendationReasons;
-  const trackBBlobRecommendationReasonsFull = trackBBlobRecommendationReasons;
   const filesFallbackPairs = (filesSkuRegionAdjustment?.substitutions ?? [])
     .filter((item) => item.applied)
     .map((item) => `${filesSkuLabelMap[item.requested]} → ${filesSkuLabelMap[item.applied]}`);
@@ -1122,17 +938,6 @@ export default function Results({
     const readiness = readinessByOutcomeId.get(outcome.id);
     return readiness && readiness.readinessState !== "Not Ready";
   });
-
-  function getComparisonStatus(serviceKey) {
-    const preferredOutcomeId = trackBPreferredByService?.[serviceKey];
-    if (!preferredOutcomeId) return "No Mapping";
-    if (trackBMatchedPreferredToTrackA?.[serviceKey] === true) return "Match";
-    if (trackBMatchedPreferredToTrackA?.[serviceKey] === false) return "Preferred Override";
-    return "No Mapping";
-  }
-
-  const blobComparisonStatus = effectiveBlobsSelected ? getComparisonStatus("blob") : null;
-  const filesComparisonStatus = effectiveFilesSelected ? getComparisonStatus("files") : null;
 
   const selectedServiceOutcomeIds = new Set(allowedByService);
   const allBlobOutcomeCandidates = outcomeCatalog.filter(
@@ -1357,31 +1162,6 @@ export default function Results({
       })
     : [];
 
-  const alternativeTrackBReadinessByOutcomeId = getAlternativeReadinessMap("B", trackBPreferredOverrideOutcomeIds);
-  const alternativeTrackBOutcome = maximizeReadinessAcrossTargets
-    ? pickAlternativeOutcome({
-        readinessMap: alternativeTrackBReadinessByOutcomeId,
-        baselineReadinessMap: trackBReadinessByOutcomeId,
-      })
-    : null;
-  const alternativeTrackBReadiness = alternativeTrackBOutcome
-    ? alternativeTrackBReadinessByOutcomeId.get(alternativeTrackBOutcome.id)
-    : null;
-  const alternativeTrackBConditions = maximizeReadinessAcrossTargets
-    ? getAlternativeConditions(alternativeTrackBOutcome, alternativeTrackBReadiness)
-    : [];
-  const alternativeTrackBDisplayConditions = getReadinessReasonsWithProtocolFixLine(
-    "Ready with Condition",
-    alternativeTrackBConditions
-  );
-  const alternativeTrackBRecommendationReasons = maximizeReadinessAcrossTargets
-    ? getAlternativeRecommendationReasons({
-        outcome: alternativeTrackBOutcome,
-        trackMode: "B",
-        preferredChoiceOverrideApplies: trackBPreferredSsdOverrideApplies,
-      })
-    : [];
-
   // Build the list of questions that were actually answered (visible questions only)
   const answeredQuestions = (questions ?? []).filter(
     (q) => answers[q.id] !== undefined
@@ -1564,53 +1344,6 @@ export default function Results({
     (sourceHasNfsV3 || sourceHasS3)
     && trackATopPriority <= 3
     && trackAVisibleCandidateTypes.size > 0;
-
-  const trackBRecommendedCandidates = [
-    ...(effectiveFilesSelected && trackBBestFilesOutcome
-      ? [{
-          type: "files",
-          priority: getRecommendedCardPriority({
-            readinessState: trackBBestFilesDisplayReadinessState,
-            isRecommended: true,
-            isReadinessMaximised: false,
-          }),
-        }]
-      : []),
-    ...(effectiveBlobsSelected && trackBBestBlobOutcome
-      ? [{
-          type: "blob",
-          priority: getRecommendedCardPriority({
-            readinessState: trackBBestBlobReadiness?.readinessState,
-            isRecommended: true,
-            isReadinessMaximised: false,
-          }),
-        }]
-      : []),
-    ...(alternativeTrackBOutcome
-      ? [{
-          type: "alt",
-          priority: getRecommendedCardPriority({
-            readinessState: "Ready with Condition",
-            isRecommended: false,
-            isReadinessMaximised: true,
-          }),
-        }]
-      : []),
-  ];
-
-  const trackBTopPriority = trackBRecommendedCandidates.length > 0
-    ? Math.min(...trackBRecommendedCandidates.map((item) => item.priority))
-    : Number.MAX_SAFE_INTEGER;
-  const trackBVisibleCandidateTypes = new Set(
-    trackBRecommendedCandidates
-      .filter((item) => item.priority === trackBTopPriority)
-      .map((item) => item.type)
-  );
-  const trackBShowTieBanner = trackBVisibleCandidateTypes.size > 1;
-  const trackBShowProtocolContextBanner =
-    (sourceHasNfsV3 || sourceHasS3)
-    && trackBTopPriority <= 3
-    && trackBVisibleCandidateTypes.size > 0;
 
   return (
     <div className="card results-card">

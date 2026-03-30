@@ -38,8 +38,6 @@ function App() {
           outcomes={trackAOutcomes}
           trackBOutcomes={trackBSelection.outcomes}
           trackBPreferredByService={trackBSelection.preferredByService}
-          trackBPreferredRow={trackBSelection.preferredRow}
-          trackBCanonicalProtocol={trackBSelection.canonicalProtocol}
           trackBMatchedPreferredToTrackA={trackBSelection.matchedPreferredToTrackA}
           allOutcomes={outcomes}
           answers={answers}
