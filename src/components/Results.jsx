@@ -778,7 +778,7 @@ export default function Results({
   const prioritizePremiumFilesForNfs = sourceHasNfs;
 
   const allowedByService = new Set(effectiveServicesWithFiles.flatMap((svc) => serviceOutcomeMap[svc] ?? []));
-  const evaluatedOutcomes = outcomeCatalog.filter((outcome) => allowedByService.has(outcome.id));
+  const baseEvaluatedOutcomes = outcomeCatalog.filter((outcome) => allowedByService.has(outcome.id));
   const outcomeById = new Map(outcomeCatalog.map((outcome) => [outcome.id, outcome]));
 
   function sortOutcomeCards(outcomeList) {
@@ -809,13 +809,26 @@ export default function Results({
     trackBPreferredOverrideOutcomeIds.add(trackBPreferredByService.files);
   }
 
+  const overlayEligibleOutcomes = Array.isArray(trackBOutcomes) && trackBOutcomes.length > 0
+    ? trackBOutcomes
+    : eligibleOutcomes;
+  const overlayOutcomeIdSet = new Set(overlayEligibleOutcomes.map((outcome) => outcome.id));
+  if (trackBPreferredByService?.blob && allowedByService.has(trackBPreferredByService.blob)) {
+    overlayOutcomeIdSet.add(trackBPreferredByService.blob);
+  }
+  if (trackBPreferredByService?.files && allowedByService.has(trackBPreferredByService.files)) {
+    overlayOutcomeIdSet.add(trackBPreferredByService.files);
+  }
+
+  const evaluatedOutcomes = outcomeCatalog.filter((outcome) => overlayOutcomeIdSet.has(outcome.id));
+
   const readinessByOutcomeId = new Map(
     evaluatedOutcomes.map((outcome) => {
       const readiness = evaluateOutcomeReadiness({
         outcome,
         answers,
-        trackMode: "A",
-        preferredOverrideOutcomeIds: new Set(),
+        trackMode: "B",
+        preferredOverrideOutcomeIds: trackBPreferredOverrideOutcomeIds,
         selectedRegion: answers?.region,
         selectedRedundancy,
         allowedByService,
@@ -840,20 +853,47 @@ export default function Results({
     })
   );
 
-  const eligibleBlobOutcomes = eligibleOutcomes.filter((outcome) => blobOutcomeSet.has(outcome.id));
-  const eligibleFilesOutcomes = eligibleOutcomes.filter((outcome) => filesOutcomeSet.has(outcome.id));
-  const bestBlobOutcome = getBestOutcomeByRank(eligibleBlobOutcomes, blobOutcomeRank);
-  const bestFilesOutcome = prioritizePremiumFilesForNfs
-    ? getBestOutcomeByReadinessThenRank(
-        eligibleFilesOutcomes,
-        filesOutcomeRank,
-        readinessByOutcomeId
-      ) ?? getBestOutcomeByRank(eligibleFilesOutcomes, filesOutcomeRank)
+  const eligibleBlobOutcomes = overlayEligibleOutcomes.filter((outcome) => blobOutcomeSet.has(outcome.id));
+  const eligibleFilesOutcomes = overlayEligibleOutcomes.filter((outcome) => filesOutcomeSet.has(outcome.id));
+  const preferredBlobOutcome = trackBPreferredByService?.blob
+    ? outcomeById.get(trackBPreferredByService.blob)
+    : null;
+  const preferredFilesOutcome = trackBPreferredByService?.files
+    ? outcomeById.get(trackBPreferredByService.files)
+    : null;
+  const preferredSsdOverrideApplies =
+    eligibleFilesOutcomes.length > 1
+    && preferredFilesOutcome?.id === "files-premium-ssd"
+    && eligibleFilesOutcomes.some((outcome) => outcome.id === "files-premium-ssd");
+
+  const recommendedBlobOutcome = getBestOutcomeByReadinessThenRank(
+    eligibleBlobOutcomes,
+    blobOutcomeRank,
+    readinessByOutcomeId
+  );
+  const recommendedFilesOutcome = getBestOutcomeByReadinessThenRank(
+    eligibleFilesOutcomes,
+    filesOutcomeRank,
+    readinessByOutcomeId
+  );
+  const recommendedFilesOutcomeLowerFirst = prioritizePremiumFilesForNfs
+    ? null
     : getFilesOutcomeByLowerSkuEscalation(
         eligibleFilesOutcomes,
         filesOutcomeRank,
         readinessByOutcomeId
-      ) ?? getBestOutcomeByRank(eligibleFilesOutcomes, filesOutcomeRank);
+      );
+
+  const fallbackBlobOutcome = getBestOutcomeByRank(eligibleBlobOutcomes, blobOutcomeRank);
+  const fallbackFilesOutcome = getBestOutcomeByRank(eligibleFilesOutcomes, filesOutcomeRank);
+
+  const bestBlobOutcome = recommendedBlobOutcome ?? preferredBlobOutcome ?? fallbackBlobOutcome;
+  const bestFilesOutcome = preferredSsdOverrideApplies
+    ? preferredFilesOutcome
+    : recommendedFilesOutcomeLowerFirst
+      ?? recommendedFilesOutcome
+      ?? preferredFilesOutcome
+      ?? fallbackFilesOutcome;
   const bestBlobReadiness = bestBlobOutcome
     ? readinessByOutcomeId.get(bestBlobOutcome.id)
     : null;
@@ -914,12 +954,6 @@ export default function Results({
   const trackBEligibleFilesOutcomes = trackBEligibleOutcomes.filter((outcome) => filesOutcomeSet.has(outcome.id));
   const trackBFallbackBlobOutcome = getBestOutcomeByRank(trackBEligibleBlobOutcomes, blobOutcomeRank);
   const trackBFallbackFilesOutcome = getBestOutcomeByRank(trackBEligibleFilesOutcomes, filesOutcomeRank);
-  const preferredBlobOutcome = trackBPreferredByService?.blob
-    ? outcomeById.get(trackBPreferredByService.blob)
-    : null;
-  const preferredFilesOutcome = trackBPreferredByService?.files
-    ? outcomeById.get(trackBPreferredByService.files)
-    : null;
   const trackBMultipleFilesEligible = trackBEligibleFilesOutcomes.length > 1;
   const trackBPreferredSsdOverrideApplies =
     trackBMultipleFilesEligible
