@@ -163,6 +163,7 @@ function validateStructuredRows(rows) {
     const filesMediaTendency = String(row?.source?.filesMediaTendency ?? "").trim();
     const blobTierTendency = String(row?.source?.blobTierTendency ?? "").trim();
     const sourceProtocolLabel = canonicalizeProtocolLabel(row?.sourceProtocolLabel);
+    const recommendedDisplay = row?.recommendedDisplay;
 
     if (!expectedWorkloadProfiles[workloadType]) {
       throw new Error(`Unexpected workload type in structured mapping: "${workloadType}"`);
@@ -175,6 +176,20 @@ function validateStructuredRows(rows) {
     }
     if (!filesMediaTendency || !blobTierTendency) {
       throw new Error(`Missing tendency metadata for workload "${workloadType}" and protocol "${sourceProtocolLabel}".`);
+    }
+    if (!recommendedDisplay || typeof recommendedDisplay !== "object") {
+      throw new Error(`Missing recommendedDisplay policy for workload "${workloadType}" and protocol "${sourceProtocolLabel}".`);
+    }
+    if (typeof recommendedDisplay.forceShowBothRecommended !== "boolean") {
+      throw new Error(`recommendedDisplay.forceShowBothRecommended must be boolean for workload "${workloadType}" and protocol "${sourceProtocolLabel}".`);
+    }
+    if (!Array.isArray(recommendedDisplay.recommendedOrder) || recommendedDisplay.recommendedOrder.length === 0) {
+      throw new Error(`recommendedDisplay.recommendedOrder must be a non-empty array for workload "${workloadType}" and protocol "${sourceProtocolLabel}".`);
+    }
+    const validServices = new Set(["files", "blobs"]);
+    const invalidOrderValue = recommendedDisplay.recommendedOrder.find((value) => !validServices.has(String(value)));
+    if (invalidOrderValue) {
+      throw new Error(`recommendedDisplay.recommendedOrder contains invalid service "${invalidOrderValue}" for workload "${workloadType}" and protocol "${sourceProtocolLabel}".`);
     }
 
     const key = `${workloadType}__${sourceProtocolLabel}`;

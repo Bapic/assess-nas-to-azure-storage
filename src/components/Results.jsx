@@ -726,6 +726,7 @@ export default function Results({
   const activeOverlay = resolveWorkloadProtocolOverlay(answers);
   const activeFilesOverlay = activeOverlay?.files ?? null;
   const activeBlobOverlay = activeOverlay?.blobs ?? null;
+  const recommendedDisplayPolicy = activeOverlay?.recommendedDisplay ?? null;
   const sourceProtocolJoined = selectedProtocolValues.join(",");
   const sourceHasSmb =
     selectedProtocolValues.includes("smb_v2")
@@ -1447,6 +1448,17 @@ export default function Results({
   const protocolContextBannerLine1 = "NetApp ONTAP AFF and NetApp ONTAP FAS NAS appliances are a File system based architecture that exposes various shares supporting multiple protocols including NFS v3 and S3. Hence NFS v3 and S3 shares are also assessed as another shares against Azure Files and performance and scale targets were applied. In some scenarios, you can also implement sharding on Azure Files shares to meet scalability requirements across Azure file shares.";
   const protocolContextBannerLine2 = "In the current case you may see Azure Blob as recommended, when source protocol is either NFS v3 or S3, purely because of protocol support and object type access. You can review Azure Files path SKU suitability and create your migration plan accordingly.";
   const shouldPrioritizeBlobInTrackARecommended = effectiveBlobAccessFrequency === "archive";
+  const shouldForceShowBothRecommendedFromPolicy =
+    !!recommendedDisplayPolicy?.forceShowBothRecommended
+    && effectiveBlobsSelected
+    && effectiveFilesSelected;
+  const recommendedOrderFromPolicy = Array.isArray(recommendedDisplayPolicy?.recommendedOrder)
+    ? recommendedDisplayPolicy.recommendedOrder
+    : [];
+  const recommendedPrimaryServiceFromPolicy = String(recommendedDisplayPolicy?.primaryService ?? "").toLowerCase();
+  const recommendedPrimaryMessageFromPolicy = recommendedDisplayPolicy?.primaryMessage ?? null;
+  const recommendedSecondaryServiceFromPolicy = String(recommendedDisplayPolicy?.secondaryService ?? "").toLowerCase();
+  const recommendedSecondaryMessageFromPolicy = recommendedDisplayPolicy?.secondaryMessage ?? null;
   const shouldPrioritizeFilesFromSmeOverride = !!activeFilesOverlay;
   const shouldPrioritizeBlobsFromSmeOverride = !!activeBlobOverlay;
 
@@ -1454,6 +1466,24 @@ export default function Results({
     blobRecommendationReasons.unshift(
       "Hardly/Never access frequency was selected, so Azure Blob Archive is prioritised in the Recommended section for long-term retention and lowest-cost storage. If Archive is unavailable or not viable, the nearest viable Blob tier is retained."
     );
+  }
+
+  if (recommendedPrimaryMessageFromPolicy) {
+    if (recommendedPrimaryServiceFromPolicy === "blobs" && effectiveBlobsSelected) {
+      blobRecommendationReasons.unshift(recommendedPrimaryMessageFromPolicy);
+    }
+    if (recommendedPrimaryServiceFromPolicy === "files" && effectiveFilesSelected) {
+      filesRecommendationReasons.unshift(recommendedPrimaryMessageFromPolicy);
+    }
+  }
+
+  if (recommendedSecondaryMessageFromPolicy) {
+    if (recommendedSecondaryServiceFromPolicy === "blobs" && effectiveBlobsSelected) {
+      blobRecommendationReasons.unshift(recommendedSecondaryMessageFromPolicy);
+    }
+    if (recommendedSecondaryServiceFromPolicy === "files" && effectiveFilesSelected) {
+      filesRecommendationReasons.unshift(recommendedSecondaryMessageFromPolicy);
+    }
   }
 
   function applyTrackABlobPriorityForArchiveAccess(basePriority, candidateType, isBlobAlternative = false) {
@@ -1536,7 +1566,29 @@ export default function Results({
       .filter((item) => item.priority === trackATopPriority)
       .map((item) => item.type)
   );
+  if (shouldForceShowBothRecommendedFromPolicy) {
+    if (bestBlobOutcome) trackAVisibleCandidateTypes.add("blob");
+    if (bestFilesOutcome) trackAVisibleCandidateTypes.add("files");
+  } else if (recommendedPrimaryServiceFromPolicy) {
+    // Policy has a primary service but forceShowBoth is off — suppress any non-primary
+    // service that naturally won the priority race.
+    const oppositePolicyType = recommendedPrimaryServiceFromPolicy === "blobs" ? "files" : "blob";
+    trackAVisibleCandidateTypes.delete(oppositePolicyType);
+    // Ensure the primary service is always shown when it has an outcome
+    const primaryPolicyType = recommendedPrimaryServiceFromPolicy === "blobs" ? "blob" : "files";
+    const primaryHasOutcome = primaryPolicyType === "blob" ? !!bestBlobOutcome : !!bestFilesOutcome;
+    if (primaryHasOutcome) trackAVisibleCandidateTypes.add(primaryPolicyType);
+  }
   const trackAShowTieBanner = trackAVisibleCandidateTypes.size > 1;
+  let renderFilesFirstInRecommended = shouldRenderFilesFirst;
+  if (shouldForceShowBothRecommendedFromPolicy) {
+    const firstRecommendedService = String(recommendedOrderFromPolicy[0] ?? "").toLowerCase();
+    if (firstRecommendedService === "blobs") {
+      renderFilesFirstInRecommended = false;
+    } else if (firstRecommendedService === "files") {
+      renderFilesFirstInRecommended = true;
+    }
+  }
   const trackAShowProtocolContextBanner =
     (sourceHasNfsV3 || sourceHasS3)
     && trackATopPriority <= 3
@@ -1655,7 +1707,7 @@ export default function Results({
                 <p className="region-notice">{recommendationTieBannerText}</p>
               )}
               <div className="recommended-grid">
-                {shouldRenderFilesFirst && trackAVisibleCandidateTypes.has("files") && (
+                {renderFilesFirstInRecommended && trackAVisibleCandidateTypes.has("files") && (
                   <article className="recommended-card">
                     <div className="recommended-title-row">
                       <h4 className="recommended-card-title">Best Eligible Azure Files SKU</h4>
@@ -1735,7 +1787,7 @@ export default function Results({
                   </article>
                 )}
 
-                {!shouldRenderFilesFirst && trackAVisibleCandidateTypes.has("files") && (
+                {!renderFilesFirstInRecommended && trackAVisibleCandidateTypes.has("files") && (
                   <article className="recommended-card">
                     <div className="recommended-title-row">
                       <h4 className="recommended-card-title">Best Eligible Azure Files SKU</h4>

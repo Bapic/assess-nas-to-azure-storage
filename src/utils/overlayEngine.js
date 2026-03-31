@@ -125,7 +125,20 @@ function resolveFromMapping(entry, matchType = "exact") {
 
   if (!filesEntry && !blobsEntry) return null;
 
-  return { files: filesEntry, blobs: blobsEntry };
+  const recommendedDisplay = entry.recommendedDisplay
+    ? {
+        forceShowBothRecommended: !!entry.recommendedDisplay.forceShowBothRecommended,
+        recommendedOrder: Array.isArray(entry.recommendedDisplay.recommendedOrder)
+          ? entry.recommendedDisplay.recommendedOrder
+          : ["files", "blobs"],
+        primaryService: entry.recommendedDisplay.primaryService ?? null,
+        primaryMessage: entry.recommendedDisplay.primaryMessage ?? null,
+        secondaryService: entry.recommendedDisplay.secondaryService ?? null,
+        secondaryMessage: entry.recommendedDisplay.secondaryMessage ?? null,
+      }
+    : null;
+
+  return { files: filesEntry, blobs: blobsEntry, recommendedDisplay };
 }
 
 // ---------------------------------------------------------------------------
@@ -189,7 +202,15 @@ function resolveFromSmeOverride(override) {
  *       mappingEntryId:    string | null
  *       rationale:         string | null
  *     } | null,
- *     blobs: { ...same shape... } | null
+ *     blobs: { ...same shape... } | null,
+ *     recommendedDisplay: {
+ *       forceShowBothRecommended: boolean,
+ *       recommendedOrder: string[],
+ *       primaryService: string | null,
+ *       primaryMessage: string | null,
+ *       secondaryService: string | null,
+ *       secondaryMessage: string | null,
+ *     } | null
  *   }
  */
 export function resolveWorkloadProtocolOverlay(answers) {
@@ -217,5 +238,6 @@ export function resolveWorkloadProtocolOverlay(answers) {
   return {
     files: smeOverlayResult?.files ?? defaultOverlay?.files ?? null,
     blobs: smeOverlayResult?.blobs ?? defaultOverlay?.blobs ?? null,
+    recommendedDisplay: defaultOverlay?.recommendedDisplay ?? null,
   };
 }
