@@ -1,0 +1,36 @@
+flowchart TD
+  A[Track A readiness results are ready] --> B[Create recommendation candidates]
+
+  B --> B1[Best Azure Files option]
+  B --> B2[Best Azure Blob option]
+  B --> B3[Optional readiness-maximised option]
+
+  B1 --> C1[Assign priority by readiness]
+  B2 --> C2[Assign priority by readiness]
+  B3 --> C3[Assign priority by readiness]
+
+  C1 --> D[Collect all candidate priorities]
+  C2 --> D
+  C3 --> D
+
+  D --> E{Blob access frequency is Hardly Never?}
+  E -->|Yes| E1[Give Blob candidates higher priority]
+  E -->|No| E2[Keep natural priority order]
+
+  E1 --> F[Pick top priority candidate set]
+  E2 --> F
+
+  F --> G{More than one top candidate?}
+  G -->|Yes| H[Show tied recommendations and tie note]
+  G -->|No| I[Show single recommendation]
+
+  H --> J[Render Track A Recommended section]
+  I --> J
+
+  subgraph Priority meaning
+    P1[Highest: Ready recommended]
+    P2[Next: Ready]
+    P3[Next: Ready with Condition]
+    P4[Next: Readiness maximised]
+    P5[Lowest: Not Ready]
+  end

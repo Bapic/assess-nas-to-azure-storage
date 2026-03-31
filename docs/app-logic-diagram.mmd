@@ -1,0 +1,45 @@
+flowchart TD
+  A[Start assessment] --> B[Step 1 Enter source details]
+  B --> C[Step 2 Enter target details]
+  C --> D[Click Continue]
+
+  D --> E[Track A checks selected targets only]
+  E --> E1[Check region availability]
+  E1 --> E2[Check redundancy compatibility]
+  E2 --> E3[Check protocol compatibility]
+  E3 --> E4[Check performance and scale fit]
+  E4 --> E5[Apply target-specific filters]
+
+  E5 --> F[Build eligible Azure options]
+  F --> G[Evaluate readiness per option]
+
+  G --> G1[Ready]
+  G --> G2[Ready with Condition]
+  G --> G3[Not Ready]
+
+  G --> H[Build Recommended section]
+  G --> I[Build To Azure Files section]
+  G --> J[Build To Azure Blobs section]
+  G --> K[Build full assessed list]
+
+  H --> L{Tie at top priority?}
+  L -->|No| L1[Show one recommendation]
+  L -->|Yes| L2[Show top tied options plus tie note]
+
+  L1 --> M[Display Track A results page]
+  L2 --> M
+  I --> M
+  J --> M
+  K --> M
+
+  subgraph Automatic compatibility handling
+    N1[Blob tier fallback if selected tier is unavailable in region]
+    N2[Files SKU switch if selected SKU is unavailable in region]
+    N3[Redundancy fallback from GZRS down to LRS]
+    N4[Readiness-maximised option if no ready option exists]
+  end
+
+  E1 -. can trigger .-> N1
+  E1 -. can trigger .-> N2
+  E2 -. can trigger .-> N3
+  H -. can include .-> N4

@@ -83,24 +83,6 @@ npm run build       # outputs to dist/
 npm run preview     # local preview of the production build
 ```
 
-### Toggle Track B visibility
-
-Track B is hidden by default and can be enabled without code edits.
-
-- Environment toggle (recommended): set `VITE_SHOW_TRACK_B=true` before running `npm run dev` or `npm run build`.
-- Quick URL override (dev/test): append `?trackB=true` to the app URL.
-- To force-hide via URL, use `?trackB=false`.
-
-Examples:
-
-```bash
-# Windows PowerShell
-$env:VITE_SHOW_TRACK_B="true"; npm run dev
-
-# Git Bash
-VITE_SHOW_TRACK_B=true npm run dev
-```
-
 ---
 
 ## Project structure

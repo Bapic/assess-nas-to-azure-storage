@@ -171,21 +171,6 @@ function isToggleEnabled(value) {
   return ["1", "true", "yes", "on"].includes(String(value ?? "").toLowerCase());
 }
 
-function getTrackBVisibilityFlag() {
-  const envEnabled = isToggleEnabled(import.meta.env.VITE_SHOW_TRACK_B);
-
-  if (typeof window === "undefined") {
-    return envEnabled;
-  }
-
-  const queryValue = new URLSearchParams(window.location.search).get("trackB");
-  if (queryValue !== null) {
-    return isToggleEnabled(queryValue);
-  }
-
-  return envEnabled;
-}
-
 function evaluateOutcomeReadiness({
   outcome,
   answers,
@@ -220,8 +205,6 @@ function evaluateOutcomeReadiness({
   const isFilesOutcome = filesOutcomeIds.includes(outcome.id);
   const isMixedProtocolPathDetected =
     (sourceHasS3 || sourceHasNfsV3) && (sourceHasSmb || sourceHasNfsV41);
-  const isTrackBPreferredOverride =
-    trackMode === "B" && preferredOverrideOutcomeIds?.has(outcome.id);
 
   if ((isBlobOutcome || isFilesOutcome) && isMixedProtocolPathDetected) {
     conditions.push(
@@ -256,15 +239,9 @@ function evaluateOutcomeReadiness({
 
       if (outcome.id !== effectiveBlobOutcomeId) {
         const effectiveTierLabel = blobTierLabelMap[effectiveBlobOutcomeId] ?? effectiveBlobOutcomeId;
-        if (isTrackBPreferredOverride) {
-          conditions.push(
-            `Preferred-choice override selected this Blob tier instead of the default effective tier (${effectiveTierLabel}).`
-          );
-        } else {
-          blockers.push(
-            `This tier is not the effective Blob tier for the current assessment (effective tier: ${effectiveTierLabel}).`
-          );
-        }
+        blockers.push(
+          `This tier is not the effective Blob tier for the current assessment (effective tier: ${effectiveTierLabel}).`
+        );
       }
 
       if (
@@ -324,11 +301,7 @@ function evaluateOutcomeReadiness({
       selectedFilesMediaOutcomes.length > 0
       && !selectedFilesMediaOutcomes.includes(outcome.id)
     ) {
-      if (isTrackBPreferredOverride) {
-        conditions.push("Preferred-choice override selected a Files SKU outside the current media preference filter.");
-      } else {
-        blockers.push("Excluded by selected Azure Files media type preference.");
-      }
+      blockers.push("Excluded by selected Azure Files media type preference.");
     }
 
     if ((filesSkuRegionAdjustment?.fallbackOutcomeIds ?? []).includes(outcome.id)) {
@@ -661,7 +634,7 @@ function getFilesRecommendationReasons({
   if (eligibleFilesOutcomes.length > 1) {
     if (preferredChoiceOverrideApplies) {
       reasons.push(
-        "Both Azure Files SKUs are suitable in this scenario; Track B applies preferred-choice mapping, so preferred SKU selection prevails and Premium SSD > Standard HDD precedence is not applied."
+        "Both Azure Files SKUs are suitable in this scenario; preferred-choice overlay applies, so preferred SKU selection prevails and Premium SSD > Standard HDD precedence is not applied."
       );
     } else if (preferLowerSkuFirst) {
       reasons.push(
@@ -684,11 +657,6 @@ function getFilesRecommendationReasons({
 
 export default function Results({
   outcomes,
-  trackBOutcomes,
-  trackBPreferredByService,
-  trackBPreferredRow,
-  trackBCanonicalProtocol,
-  trackBMatchedPreferredToTrackA,
   allOutcomes,
   answers,
   questions,
@@ -772,7 +740,6 @@ export default function Results({
     ?? null;
   const effectiveBlobsSelected = blobsSelected;
   const showRecommendedSection = effectiveFilesSelected || effectiveBlobsSelected;
-  const showTrackB = getTrackBVisibilityFlag();
   const maximizeReadinessAcrossTargets = answers?.maximizeReadinessAcrossTargets !== false;
   const prioritizeFilesBeforeBlob = sourceNas === "netapp" || sourceNas === "dell";
   const prioritizePremiumFilesForNfs = sourceHasNfs;
@@ -795,19 +762,13 @@ export default function Results({
     });
   }
 
+  const orderedEvaluatedOutcomes = sortOutcomeCards(evaluatedOutcomes);
+
   const shouldRenderFilesFirst = prioritizeFilesBeforeBlob && effectiveFilesSelected && effectiveBlobsSelected;
 
   const selectedFilesMediaOutcomes = answers?.filesMediaType
     ? filesSkuRegionAdjustment?.appliedOutcomeIds ?? toFilesOutcomeIds(answers.filesMediaType)
     : [];
-
-  const trackBPreferredOverrideOutcomeIds = new Set();
-  if (trackBMatchedPreferredToTrackA?.blob === false && trackBPreferredByService?.blob) {
-    trackBPreferredOverrideOutcomeIds.add(trackBPreferredByService.blob);
-  }
-  if (trackBMatchedPreferredToTrackA?.files === false && trackBPreferredByService?.files) {
-    trackBPreferredOverrideOutcomeIds.add(trackBPreferredByService.files);
-  }
 
   const readinessByOutcomeId = new Map(
     evaluatedOutcomes.map((outcome) => {
@@ -842,8 +803,8 @@ export default function Results({
 
   const eligibleBlobOutcomes = eligibleOutcomes.filter((outcome) => blobOutcomeSet.has(outcome.id));
   const eligibleFilesOutcomes = eligibleOutcomes.filter((outcome) => filesOutcomeSet.has(outcome.id));
-  const bestBlobOutcome = getBestOutcomeByRank(eligibleBlobOutcomes, blobOutcomeRank);
-  const bestFilesOutcome = prioritizePremiumFilesForNfs
+  const assessedBlobOutcome = getBestOutcomeByRank(eligibleBlobOutcomes, blobOutcomeRank);
+  const assessedFilesOutcome = prioritizePremiumFilesForNfs
     ? getBestOutcomeByReadinessThenRank(
         eligibleFilesOutcomes,
         filesOutcomeRank,
@@ -854,133 +815,30 @@ export default function Results({
         filesOutcomeRank,
         readinessByOutcomeId
       ) ?? getBestOutcomeByRank(eligibleFilesOutcomes, filesOutcomeRank);
-  const bestBlobReadiness = bestBlobOutcome
+
+  let bestBlobOutcome = assessedBlobOutcome;
+  let bestFilesOutcome = assessedFilesOutcome;
+  let bestBlobReadiness = bestBlobOutcome
     ? readinessByOutcomeId.get(bestBlobOutcome.id)
     : null;
-  const bestFilesReadiness = bestFilesOutcome
+  let bestFilesReadiness = bestFilesOutcome
     ? readinessByOutcomeId.get(bestFilesOutcome.id)
     : null;
 
-  const trackBEligibleOutcomes = Array.isArray(trackBOutcomes) ? trackBOutcomes : [];
-  const trackBOutcomeIdSet = new Set(trackBEligibleOutcomes.map((outcome) => outcome.id));
-  if (trackBPreferredByService?.blob && allowedByService.has(trackBPreferredByService.blob)) {
-    trackBOutcomeIdSet.add(trackBPreferredByService.blob);
-  }
-  if (trackBPreferredByService?.files && allowedByService.has(trackBPreferredByService.files)) {
-    trackBOutcomeIdSet.add(trackBPreferredByService.files);
-  }
-  const trackBEvaluatedOutcomes = outcomeCatalog.filter((outcome) => trackBOutcomeIdSet.has(outcome.id));
-
-  const trackBReadinessByOutcomeId = new Map(
-    trackBEvaluatedOutcomes.map((outcome) => {
-      const readiness = evaluateOutcomeReadiness({
-        outcome,
-        answers,
-        trackMode: "B",
-        preferredOverrideOutcomeIds: trackBPreferredOverrideOutcomeIds,
-        selectedRegion: answers?.region,
-        selectedRedundancy,
-        allowedByService,
-        sourceHasSmb,
-        sourceHasS3,
-        sourceHasNfs,
-        sourceHasNfsV3,
-        sourceHasNfsV41,
-        blobProtocolSupported,
-        filesProtocolSupported,
-        effectiveBlobAccessFrequency,
-        blobTierRegionAdjustment,
-        selectedFilesMediaOutcomes,
-        filesPerformanceEligibility,
-        filesSkuRegionAdjustment,
-        redundancyLabelMap,
-        blobTierLabelMap,
-        filesSkuLabelMap,
-        s3FilesCrossAssessmentMode: s3FilesCrossAssessmentEnabled && filesOutcomeSet.has(outcome.id),
-      });
-      return [outcome.id, readiness];
-    })
-  );
-
-  const trackBHasReadyOrConditionalOutcome = trackBEvaluatedOutcomes.some((outcome) => {
-    const readiness = trackBReadinessByOutcomeId.get(outcome.id);
-    return readiness && readiness.readinessState !== "Not Ready";
-  });
-
-  const orderedEvaluatedOutcomes = sortOutcomeCards(evaluatedOutcomes);
-  const orderedTrackBEvaluatedOutcomes = sortOutcomeCards(trackBEvaluatedOutcomes);
-
-  const trackBEligibleBlobOutcomes = trackBEligibleOutcomes.filter((outcome) => blobOutcomeSet.has(outcome.id));
-  const trackBEligibleFilesOutcomes = trackBEligibleOutcomes.filter((outcome) => filesOutcomeSet.has(outcome.id));
-  const trackBFallbackBlobOutcome = getBestOutcomeByRank(trackBEligibleBlobOutcomes, blobOutcomeRank);
-  const trackBFallbackFilesOutcome = getBestOutcomeByRank(trackBEligibleFilesOutcomes, filesOutcomeRank);
-  const preferredBlobOutcome = trackBPreferredByService?.blob
-    ? outcomeById.get(trackBPreferredByService.blob)
-    : null;
-  const preferredFilesOutcome = trackBPreferredByService?.files
-    ? outcomeById.get(trackBPreferredByService.files)
-    : null;
-  const trackBMultipleFilesEligible = trackBEligibleFilesOutcomes.length > 1;
-  const trackBPreferredSsdOverrideApplies =
-    trackBMultipleFilesEligible
-    && preferredFilesOutcome?.id === "files-premium-ssd"
-    && trackBEligibleFilesOutcomes.some((outcome) => outcome.id === "files-premium-ssd");
-  const trackBRecommendedBlobOutcome = getBestOutcomeByReadinessThenRank(
-    trackBEligibleBlobOutcomes,
-    blobOutcomeRank,
-    trackBReadinessByOutcomeId
-  );
-  const trackBRecommendedFilesOutcome = getBestOutcomeByReadinessThenRank(
-    trackBEligibleFilesOutcomes,
-    filesOutcomeRank,
-    trackBReadinessByOutcomeId
-  );
-  const trackBRecommendedFilesOutcomeLowerFirst = prioritizePremiumFilesForNfs
-    ? null
-    : getFilesOutcomeByLowerSkuEscalation(
-        trackBEligibleFilesOutcomes,
-        filesOutcomeRank,
-        trackBReadinessByOutcomeId
-      );
-  const trackBBestBlobOutcome = trackBRecommendedBlobOutcome ?? preferredBlobOutcome ?? trackBFallbackBlobOutcome;
-  const trackBBestFilesOutcome = trackBPreferredSsdOverrideApplies
-    ? preferredFilesOutcome
-    : trackBRecommendedFilesOutcomeLowerFirst
-      ?? trackBRecommendedFilesOutcome
-      ?? preferredFilesOutcome
-      ?? trackBFallbackFilesOutcome;
-  const trackBBestBlobReadiness = trackBBestBlobOutcome
-    ? trackBReadinessByOutcomeId.get(trackBBestBlobOutcome.id)
-    : null;
-  const trackBBestFilesReadiness = trackBBestFilesOutcome
-    ? trackBReadinessByOutcomeId.get(trackBBestFilesOutcome.id)
-    : null;
-  const bestFilesDisplayReadinessState = s3FilesCrossAssessmentEnabled
+  let bestFilesDisplayReadinessState = s3FilesCrossAssessmentEnabled
     ? "Ready with Condition"
     : bestFilesReadiness?.readinessState;
-  const trackBBestFilesDisplayReadinessState = s3FilesCrossAssessmentEnabled
-    ? "Ready with Condition"
-    : trackBBestFilesReadiness?.readinessState;
-  const bestFilesDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
+  let bestFilesDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
     bestFilesDisplayReadinessState,
     bestFilesReadiness?.readinessReasons ?? [],
     s3FilesCrossAssessmentEnabled
   );
-  const bestBlobDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
+  let bestBlobDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
     bestBlobReadiness?.readinessState,
     bestBlobReadiness?.readinessReasons ?? []
   );
-  const trackBBestFilesDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
-    trackBBestFilesDisplayReadinessState,
-    trackBBestFilesReadiness?.readinessReasons ?? [],
-    s3FilesCrossAssessmentEnabled
-  );
-  const trackBBestBlobDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
-    trackBBestBlobReadiness?.readinessState,
-    trackBBestBlobReadiness?.readinessReasons ?? []
-  );
 
-  const blobRecommendationReasons = effectiveBlobsSelected
+  let blobRecommendationReasons = effectiveBlobsSelected
     ? getBlobRecommendationReasons({
         answers,
         bestBlobOutcome,
@@ -993,7 +851,7 @@ export default function Results({
       })
     : [];
 
-  const filesRecommendationReasons = effectiveFilesSelected
+  let filesRecommendationReasons = effectiveFilesSelected
     ? getFilesRecommendationReasons({
         answers,
         bestFilesOutcome,
@@ -1008,81 +866,6 @@ export default function Results({
         getOutcomeRedundancyAdjustment,
       })
     : [];
-
-  const trackBBlobRecommendationReasons = effectiveBlobsSelected
-    ? getBlobRecommendationReasons({
-        answers,
-        bestBlobOutcome: trackBBestBlobOutcome,
-        eligibleBlobOutcomes: trackBEligibleBlobOutcomes,
-        autoIncludedBlobForProtocolPriority,
-        blobTierRegionAdjustment,
-        blobTierLabelMap,
-        redundancyLabelMap,
-        getOutcomeRedundancyAdjustment,
-      })
-    : [];
-
-  const trackBFilesRecommendationReasons = effectiveFilesSelected
-    ? getFilesRecommendationReasons({
-        answers,
-        bestFilesOutcome: trackBBestFilesOutcome,
-        eligibleFilesOutcomes: trackBEligibleFilesOutcomes,
-        preferredChoiceOverrideApplies: trackBPreferredSsdOverrideApplies,
-        preferLowerSkuFirst: !trackBPreferredSsdOverrideApplies && !prioritizePremiumFilesForNfs,
-        s3FilesCrossAssessmentMode: s3FilesCrossAssessmentEnabled,
-        filesSkuRegionAdjustment,
-        filesPerformanceEligibility,
-        filesSkuLabelMap,
-        redundancyLabelMap,
-        getOutcomeRedundancyAdjustment,
-      })
-    : [];
-
-  const trackBBlobAccessFrequencyLockReason =
-    answers?.workloadType === "Infrequently accessed data / backup, archives retained online (compliance, historical data)"
-      ? "Access frequency was locked by workload selection: Infrequently used maps to Blob Hardly/Never (Archive tier)."
-      : answers?.workloadType === "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)"
-        ? "Access frequency was locked by workload selection: AI/ML keeps the default Blob access frequency (Hot tier)."
-        : null;
-
-  if (trackBBlobAccessFrequencyLockReason && effectiveBlobsSelected) {
-    trackBBlobRecommendationReasons.unshift(trackBBlobAccessFrequencyLockReason);
-  }
-
-  if (trackBPreferredRow) {
-    const matrixContext = `Preferred-choice matrix matched Workload type \"${trackBPreferredRow.workloadType}\" + Source protocol \"${trackBCanonicalProtocol || trackBPreferredRow.sourceProtocolLabel}\".`;
-    if (effectiveBlobsSelected) trackBBlobRecommendationReasons.unshift(matrixContext);
-    if (effectiveFilesSelected) trackBFilesRecommendationReasons.unshift(matrixContext);
-  } else {
-    const fallbackContext = "No preferred-choice matrix row matched this workload/protocol combination, so Track B fell back to Track A suitability logic.";
-    if (effectiveBlobsSelected) trackBBlobRecommendationReasons.unshift(fallbackContext);
-    if (effectiveFilesSelected) trackBFilesRecommendationReasons.unshift(fallbackContext);
-  }
-
-  if (trackBPreferredByService?.blob && bestBlobOutcome?.id) {
-    if (trackBMatchedPreferredToTrackA?.blob === true) {
-      trackBBlobRecommendationReasons.unshift("Track A and preferred-choice mapping are aligned for Blob recommendation.");
-    } else if (trackBMatchedPreferredToTrackA?.blob === false) {
-      trackBBlobRecommendationReasons.unshift("Track B mismatch detected against Track A for Blob; recommended outcome is now selected by readiness priority (Ready, then Ready with Condition), while preferred outcome remains listed in Track B SKU details.");
-    }
-  }
-
-  if (trackBPreferredByService?.files && bestFilesOutcome?.id) {
-    if (trackBMatchedPreferredToTrackA?.files === true) {
-      trackBFilesRecommendationReasons.unshift("Track A and preferred-choice mapping are aligned for Azure Files recommendation.");
-    } else if (trackBMatchedPreferredToTrackA?.files === false) {
-      trackBFilesRecommendationReasons.unshift("Track B mismatch detected against Track A for Azure Files; recommended outcome is now selected by readiness priority (Ready, then Ready with Condition), while preferred outcome remains listed in Track B SKU details.");
-    }
-  }
-
-  if (trackBPreferredSsdOverrideApplies) {
-    trackBFilesRecommendationReasons.unshift(
-      "Preferred-choice mapping explicitly recommends Azure Files Premium SSD for this workload/protocol combination. Since multiple Azure Files SKUs are eligible, Premium SSD is selected in Track B Recommended section."
-    );
-  }
-
-  const trackABlobRecommendationReasonsFull = blobRecommendationReasons;
-  const trackBBlobRecommendationReasonsFull = trackBBlobRecommendationReasons;
   const filesFallbackPairs = (filesSkuRegionAdjustment?.substitutions ?? [])
     .filter((item) => item.applied)
     .map((item) => `${filesSkuLabelMap[item.requested]} → ${filesSkuLabelMap[item.applied]}`);
@@ -1105,16 +888,7 @@ export default function Results({
     return readiness && readiness.readinessState !== "Not Ready";
   });
 
-  function getComparisonStatus(serviceKey) {
-    const preferredOutcomeId = trackBPreferredByService?.[serviceKey];
-    if (!preferredOutcomeId) return "No Mapping";
-    if (trackBMatchedPreferredToTrackA?.[serviceKey] === true) return "Match";
-    if (trackBMatchedPreferredToTrackA?.[serviceKey] === false) return "Preferred Override";
-    return "No Mapping";
-  }
 
-  const blobComparisonStatus = effectiveBlobsSelected ? getComparisonStatus("blob") : null;
-  const filesComparisonStatus = effectiveFilesSelected ? getComparisonStatus("files") : null;
 
   const selectedServiceOutcomeIds = new Set(allowedByService);
   const allBlobOutcomeCandidates = outcomeCatalog.filter(
@@ -1339,35 +1113,132 @@ export default function Results({
       })
     : [];
 
-  const alternativeTrackBReadinessByOutcomeId = getAlternativeReadinessMap("B", trackBPreferredOverrideOutcomeIds);
-  const alternativeTrackBOutcome = maximizeReadinessAcrossTargets
-    ? pickAlternativeOutcome({
-        readinessMap: alternativeTrackBReadinessByOutcomeId,
-        baselineReadinessMap: trackBReadinessByOutcomeId,
-      })
-    : null;
-  const alternativeTrackBReadiness = alternativeTrackBOutcome
-    ? alternativeTrackBReadinessByOutcomeId.get(alternativeTrackBOutcome.id)
-    : null;
-  const alternativeTrackBConditions = maximizeReadinessAcrossTargets
-    ? getAlternativeConditions(alternativeTrackBOutcome, alternativeTrackBReadiness)
-    : [];
-  const alternativeTrackBDisplayConditions = getReadinessReasonsWithProtocolFixLine(
-    "Ready with Condition",
-    alternativeTrackBConditions
-  );
-  const alternativeTrackBRecommendationReasons = maximizeReadinessAcrossTargets
-    ? getAlternativeRecommendationReasons({
-        outcome: alternativeTrackBOutcome,
-        trackMode: "B",
-        preferredChoiceOverrideApplies: trackBPreferredSsdOverrideApplies,
-      })
-    : [];
-
   // Build the list of questions that were actually answered (visible questions only)
   const answeredQuestions = (questions ?? []).filter(
     (q) => answers[q.id] !== undefined
   );
+
+  const selectedTargetServices = new Set(
+    Array.isArray(answers?.targetService)
+      ? answers.targetService
+      : answers?.targetService
+        ? [answers.targetService]
+        : []
+  );
+
+  const formatSkuOrTier = (outcome, fallback = "Not assessed") =>
+    outcome ? getOutcomeTierLabel(outcome) : fallback;
+
+  const readinessMaximizedBlobFallbackOutcome = maximizeReadinessAcrossTargets
+    ? getBestOutcomeByReadinessThenRank(
+        allBlobOutcomeCandidates,
+        blobOutcomeRank,
+        alternativeReadinessByOutcomeId
+      ) ?? getBestOutcomeByRank(allBlobOutcomeCandidates, blobOutcomeRank)
+    : null;
+
+  const readinessMaximizedFilesFallbackOutcome = maximizeReadinessAcrossTargets
+    ? pickBestFilesCandidate(allFilesOutcomeCandidates, alternativeReadinessByOutcomeId)
+      ?? getBestOutcomeByRank(allFilesOutcomeCandidates, filesOutcomeRank)
+    : null;
+
+  const readinessMaximizedBlobOutcome = !assessedBlobOutcome
+    ? readinessMaximizedBlobFallbackOutcome
+    : null;
+
+  const readinessMaximizedFilesOutcome = !assessedFilesOutcome
+    ? readinessMaximizedFilesFallbackOutcome
+    : null;
+
+  const baseBlobOutcomeForFlow = assessedBlobOutcome ?? readinessMaximizedBlobFallbackOutcome;
+  const baseFilesOutcomeForFlow = assessedFilesOutcome ?? readinessMaximizedFilesFallbackOutcome;
+
+  const finalBlobOutcomeForFlow = baseBlobOutcomeForFlow;
+  const finalFilesOutcomeForFlow = baseFilesOutcomeForFlow;
+
+  const filesUsedFallbackInTrackA = !assessedFilesOutcome && !!baseFilesOutcomeForFlow;
+  const blobUsedFallbackInTrackA = !assessedBlobOutcome && !!baseBlobOutcomeForFlow;
+
+  bestBlobOutcome = finalBlobOutcomeForFlow;
+  bestFilesOutcome = finalFilesOutcomeForFlow;
+
+  bestBlobReadiness = bestBlobOutcome
+    ? alternativeReadinessByOutcomeId.get(bestBlobOutcome.id)
+      ?? readinessByOutcomeId.get(bestBlobOutcome.id)
+    : null;
+  bestFilesReadiness = bestFilesOutcome
+    ? alternativeReadinessByOutcomeId.get(bestFilesOutcome.id)
+      ?? readinessByOutcomeId.get(bestFilesOutcome.id)
+    : null;
+
+  bestFilesDisplayReadinessState = s3FilesCrossAssessmentEnabled
+    ? "Ready with Condition"
+    : bestFilesReadiness?.readinessState;
+  bestFilesDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
+    bestFilesDisplayReadinessState,
+    bestFilesReadiness?.readinessReasons ?? [],
+    s3FilesCrossAssessmentEnabled
+  );
+  bestBlobDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
+    bestBlobReadiness?.readinessState,
+    bestBlobReadiness?.readinessReasons ?? []
+  );
+
+  blobRecommendationReasons = effectiveBlobsSelected
+    ? getBlobRecommendationReasons({
+        answers,
+        bestBlobOutcome,
+        eligibleBlobOutcomes: allBlobOutcomeCandidates,
+        autoIncludedBlobForProtocolPriority,
+        blobTierRegionAdjustment,
+        blobTierLabelMap,
+        redundancyLabelMap,
+        getOutcomeRedundancyAdjustment,
+      })
+    : [];
+
+  filesRecommendationReasons = effectiveFilesSelected
+    ? getFilesRecommendationReasons({
+        answers,
+        bestFilesOutcome,
+        eligibleFilesOutcomes,
+        preferredChoiceOverrideApplies: false,
+        preferLowerSkuFirst: !prioritizePremiumFilesForNfs,
+        s3FilesCrossAssessmentMode: s3FilesCrossAssessmentEnabled,
+        filesSkuRegionAdjustment,
+        filesPerformanceEligibility,
+        filesSkuLabelMap,
+        redundancyLabelMap,
+        getOutcomeRedundancyAdjustment,
+      })
+    : [];
+
+  if (blobUsedFallbackInTrackA && effectiveBlobsSelected) {
+    blobRecommendationReasons.unshift(
+      "Strict assessment returned no Blob tier, so readiness-maximised fallback selected the best conditioned Blob tier."
+    );
+  }
+  if (filesUsedFallbackInTrackA && effectiveFilesSelected) {
+    filesRecommendationReasons.unshift(
+      "Strict assessment returned no Files SKU, so readiness-maximised fallback selected the best conditioned Files SKU within performance and scale limits."
+    );
+  }
+
+
+  const summaryOutcomeFlowItems = [];
+  if (selectedTargetServices.has("blobs")) {
+    const blobFallbackApplied = !assessedBlobOutcome && !!readinessMaximizedBlobFallbackOutcome;
+    summaryOutcomeFlowItems.push(
+      `Azure Blobs: assessment ${formatSkuOrTier(assessedBlobOutcome)} -> readiness maximised fallback ${blobFallbackApplied ? formatSkuOrTier(readinessMaximizedBlobFallbackOutcome) : "not applied"} -> preferred workload overlay pending implementation -> final result ${formatSkuOrTier(finalBlobOutcomeForFlow)}`
+    );
+  }
+
+  if (selectedTargetServices.has("files")) {
+    const filesFallbackApplied = !assessedFilesOutcome && !!readinessMaximizedFilesFallbackOutcome;
+    summaryOutcomeFlowItems.push(
+      `Azure Files: assessment ${formatSkuOrTier(assessedFilesOutcome)} -> readiness maximised fallback ${filesFallbackApplied ? formatSkuOrTier(readinessMaximizedFilesFallbackOutcome) : "not applied"} -> preferred workload overlay pending implementation -> final result ${formatSkuOrTier(finalFilesOutcomeForFlow)}`
+    );
+  }
 
   const protocolLabelMap = {
     smb_v2: "SMB v2.x",
@@ -1467,25 +1338,9 @@ export default function Results({
     return 4;
   }
 
-  const topFilesServiceOutcomes = filesServiceSectionOutcomes
-    .slice()
-    .sort((a, b) => {
-      const priorityDiff = getServiceSectionPriority(a, "files") - getServiceSectionPriority(b, "files");
-      if (priorityDiff !== 0) return priorityDiff;
-      return (evaluatedOrderIndex.get(a.id) ?? Number.MAX_SAFE_INTEGER)
-        - (evaluatedOrderIndex.get(b.id) ?? Number.MAX_SAFE_INTEGER);
-    })
-    .slice(0, 1);
+  const topFilesServiceOutcomes = bestFilesOutcome ? [bestFilesOutcome] : [];
 
-  const topBlobServiceOutcomes = blobServiceSectionOutcomes
-    .slice()
-    .sort((a, b) => {
-      const priorityDiff = getServiceSectionPriority(a, "blob") - getServiceSectionPriority(b, "blob");
-      if (priorityDiff !== 0) return priorityDiff;
-      return (evaluatedOrderIndex.get(a.id) ?? Number.MAX_SAFE_INTEGER)
-        - (evaluatedOrderIndex.get(b.id) ?? Number.MAX_SAFE_INTEGER);
-    })
-    .slice(0, 1);
+  const topBlobServiceOutcomes = bestBlobOutcome ? [bestBlobOutcome] : [];
 
   const recommendationTieBannerText = "In the real app, two SKUs form same service or different service with same weightage/status will rank the one with least cost. Options are available for you to choose considering workload suitability, protocol adaptions, application compatibility checks and necessary POCs before migration.";
   const protocolContextBannerLine1 = "NetApp ONTAP AFF and NetApp ONTAP FAS NAS appliances are a File system based architecture that exposes various shares supporting multiple protocols including NFS v3 and S3. Hence NFS v3 and S3 shares are also assessed as another shares against Azure Files and performance and scale targets were applied. In some scenarios, you can also implement sharding on Azure Files shares to meet scalability requirements across Azure file shares.";
@@ -1546,53 +1401,6 @@ export default function Results({
     (sourceHasNfsV3 || sourceHasS3)
     && trackATopPriority <= 3
     && trackAVisibleCandidateTypes.size > 0;
-
-  const trackBRecommendedCandidates = [
-    ...(effectiveFilesSelected && trackBBestFilesOutcome
-      ? [{
-          type: "files",
-          priority: getRecommendedCardPriority({
-            readinessState: trackBBestFilesDisplayReadinessState,
-            isRecommended: true,
-            isReadinessMaximised: false,
-          }),
-        }]
-      : []),
-    ...(effectiveBlobsSelected && trackBBestBlobOutcome
-      ? [{
-          type: "blob",
-          priority: getRecommendedCardPriority({
-            readinessState: trackBBestBlobReadiness?.readinessState,
-            isRecommended: true,
-            isReadinessMaximised: false,
-          }),
-        }]
-      : []),
-    ...(alternativeTrackBOutcome
-      ? [{
-          type: "alt",
-          priority: getRecommendedCardPriority({
-            readinessState: "Ready with Condition",
-            isRecommended: false,
-            isReadinessMaximised: true,
-          }),
-        }]
-      : []),
-  ];
-
-  const trackBTopPriority = trackBRecommendedCandidates.length > 0
-    ? Math.min(...trackBRecommendedCandidates.map((item) => item.priority))
-    : Number.MAX_SAFE_INTEGER;
-  const trackBVisibleCandidateTypes = new Set(
-    trackBRecommendedCandidates
-      .filter((item) => item.priority === trackBTopPriority)
-      .map((item) => item.type)
-  );
-  const trackBShowTieBanner = trackBVisibleCandidateTypes.size > 1;
-  const trackBShowProtocolContextBanner =
-    (sourceHasNfsV3 || sourceHasS3)
-    && trackBTopPriority <= 3
-    && trackBVisibleCandidateTypes.size > 0;
 
   return (
     <div className="card results-card">
@@ -1655,7 +1463,7 @@ export default function Results({
         </ul>
       </div>
 
-      <div className={`track-columns${showTrackB ? "" : " single-track"}`}>
+          <div className="track-columns single-track">
         <section className="track-panel" aria-label="Track A panel">
           {showRecommendedSection && (
             <details className="assessed-options-disclosure" open>
@@ -1746,7 +1554,7 @@ export default function Results({
                     )}
                     <h5 className="recommended-card-subheading">Why was this access tier recommended?</h5>
                     <ol className="recommended-logic-list">
-                      {trackABlobRecommendationReasonsFull.map((reason) => (
+                      {blobRecommendationReasons.map((reason) => (
                         <li key={reason}>{reason}</li>
                       ))}
                     </ol>
@@ -1799,9 +1607,6 @@ export default function Results({
                     <div className="recommended-title-row">
                       <h4 className="recommended-card-title">Additional selected-service option</h4>
                       <span className={getReadinessBadgeClass("Ready with Condition")}>Ready with Condition</span>
-                      <span className="result-badge" aria-label="Readiness maximised">
-                        Readiness maximised
-                      </span>
                     </div>
                     <p className="recommended-card-value">{alternativeTrackAOutcome.title}</p>
                     <p className="recommended-card-readiness">Readiness: Ready with Condition</p>
@@ -1844,7 +1649,6 @@ export default function Results({
                   {topFilesServiceOutcomes.map((outcome) => {
                     const readiness = readinessByOutcomeId.get(outcome.id);
                     const readinessState = readiness?.readinessState ?? "Not Ready";
-                    const isRecommended = bestFilesOutcome?.id === outcome.id;
                     const isReadinessMaximised = alternativeTrackAOutcome?.id === outcome.id;
                     const displayReadinessState = isReadinessMaximised
                       ? "Ready with Condition"
@@ -1879,16 +1683,6 @@ export default function Results({
                         <div className="recommended-title-row">
                           <h4 className="recommended-card-title">Best Eligible Azure Files SKU</h4>
                           <span className={getReadinessBadgeClass(displayReadinessState)}>{displayReadinessState}</span>
-                          {isRecommended && (
-                            <span className="result-badge" aria-label="Recommended">
-                              Recommended
-                            </span>
-                          )}
-                          {isReadinessMaximised && (
-                            <span className="result-badge" aria-label="Readiness maximised">
-                              Readiness maximised
-                            </span>
-                          )}
                         </div>
                         <p className="recommended-card-value">{outcome.title}</p>
                         <p className="recommended-card-readiness">Readiness: {displayReadinessState}</p>
@@ -1927,7 +1721,6 @@ export default function Results({
                   {topBlobServiceOutcomes.map((outcome) => {
                     const readiness = readinessByOutcomeId.get(outcome.id);
                     const readinessState = readiness?.readinessState ?? "Not Ready";
-                    const isRecommended = bestBlobOutcome?.id === outcome.id;
                     const isReadinessMaximised = alternativeTrackAOutcome?.id === outcome.id;
                     const displayReadinessState = isReadinessMaximised
                       ? "Ready with Condition"
@@ -1956,16 +1749,6 @@ export default function Results({
                         <div className="recommended-title-row">
                           <h4 className="recommended-card-title">Best Eligible Azure Blob Access Tier</h4>
                           <span className={getReadinessBadgeClass(displayReadinessState)}>{displayReadinessState}</span>
-                          {isRecommended && (
-                            <span className="result-badge" aria-label="Recommended">
-                              Recommended
-                            </span>
-                          )}
-                          {isReadinessMaximised && (
-                            <span className="result-badge" aria-label="Readiness maximised">
-                              Readiness maximised
-                            </span>
-                          )}
                         </div>
                         <p className="recommended-card-value">{outcome.title}</p>
                         <p className="recommended-card-readiness">Readiness: {displayReadinessState}</p>
@@ -2003,9 +1786,6 @@ export default function Results({
                     <div className="recommended-title-row">
                       <h4 className="recommended-card-title">Additional selected-service option</h4>
                       <span className={getReadinessBadgeClass("Ready with Condition")}>Ready with Condition</span>
-                      <span className="result-badge" aria-label="Readiness maximised">
-                        Readiness maximised
-                      </span>
                     </div>
                     <p className="recommended-card-value">{alternativeTrackAOutcome.title}</p>
                     <p className="recommended-card-readiness">Readiness: Ready with Condition</p>
@@ -2103,289 +1883,6 @@ export default function Results({
           )}
         </section>
 
-        {showTrackB && (
-          <section className="track-panel" aria-label="Track B panel">
-            <h3 className="track-panel-heading">Track B — Workload suitability mapping and preference + Track A Suitability</h3>
-
-          {showRecommendedSection && (
-            <details className="assessed-options-disclosure" open>
-              <summary className="assessed-options-summary">RECOMMENDED</summary>
-
-              <section className="recommended-section" aria-label="Track B preferred choice">
-              {trackBShowProtocolContextBanner && (
-                <p className="region-notice">
-                  {protocolContextBannerLine1}
-                  <br />
-                  <br />
-                  {protocolContextBannerLine2}
-                </p>
-              )}
-              {trackBShowTieBanner && (
-                <p className="region-notice">{recommendationTieBannerText}</p>
-              )}
-              <div className="recommended-grid">
-                {shouldRenderFilesFirst && trackBVisibleCandidateTypes.has("files") && (
-                  <article className="recommended-card">
-                    <div className="recommended-title-row">
-                      <h4 className="recommended-card-title">Best Eligible Azure Files SKU</h4>
-                      {filesComparisonStatus && (
-                        <span className={getComparisonBadgeClass(filesComparisonStatus)}>{filesComparisonStatus}</span>
-                      )}
-                    </div>
-                    <p className="recommended-card-value">
-                      {trackBBestFilesOutcome ? trackBBestFilesOutcome.title : "No eligible Azure Files SKU"}
-                    </p>
-                    {trackBBestFilesReadiness && (
-                      <>
-                        <p className="recommended-card-readiness">
-                          Readiness: {trackBBestFilesDisplayReadinessState}
-                        </p>
-                        {trackBBestFilesDisplayReadinessReasons.length > 0 && (
-                          <>
-                            <h5 className="recommended-card-subheading">Readiness reasons</h5>
-                            <ul className="readiness-reasons-list">
-                              {trackBBestFilesDisplayReadinessReasons.map((reason, index) => (
-                                <li key={`trackb-files-readiness-${index}`}>{reason}</li>
-                              ))}
-                            </ul>
-                          </>
-                        )}
-                      </>
-                    )}
-                    <h5 className="recommended-card-subheading">Why was this SKU recommended?</h5>
-                    <ol className="recommended-logic-list">
-                      {trackBFilesRecommendationReasons.map((reason, index) => (
-                        <li key={`trackb-files-reason-${index}`}>{reason}</li>
-                      ))}
-                    </ol>
-                    <button type="button" className="wave-plan-btn">Add to wave plan</button>
-                  </article>
-                )}
-
-                {trackBVisibleCandidateTypes.has("blob") && (
-                  <article className="recommended-card">
-                    <div className="recommended-title-row">
-                      <h4 className="recommended-card-title">Best Eligible Azure Blob Access Tier</h4>
-                      {blobComparisonStatus && (
-                        <span className={getComparisonBadgeClass(blobComparisonStatus)}>{blobComparisonStatus}</span>
-                      )}
-                    </div>
-                    <p className="recommended-card-value">
-                      {trackBBestBlobOutcome ? trackBBestBlobOutcome.title : "No eligible Blob tier"}
-                    </p>
-                    {trackBBestBlobReadiness && (
-                      <>
-                        <p className="recommended-card-readiness">
-                          Readiness: {trackBBestBlobReadiness.readinessState}
-                        </p>
-                        {trackBBestBlobDisplayReadinessReasons.length > 0 && (
-                          <>
-                            <h5 className="recommended-card-subheading">Readiness reasons</h5>
-                            <ul className="readiness-reasons-list">
-                              {trackBBestBlobDisplayReadinessReasons.map((reason, index) => (
-                                <li key={`trackb-blob-readiness-${index}`}>{reason}</li>
-                              ))}
-                            </ul>
-                          </>
-                        )}
-                      </>
-                    )}
-                    <h5 className="recommended-card-subheading">Why was this access tier recommended?</h5>
-                    <ol className="recommended-logic-list">
-                      {trackBBlobRecommendationReasonsFull.map((reason, index) => (
-                        <li key={`trackb-blob-reason-${index}`}>{reason}</li>
-                      ))}
-                    </ol>
-                    <button type="button" className="wave-plan-btn">Add to wave plan</button>
-                  </article>
-                )}
-
-                {!shouldRenderFilesFirst && trackBVisibleCandidateTypes.has("files") && (
-                  <article className="recommended-card">
-                    <div className="recommended-title-row">
-                      <h4 className="recommended-card-title">Best Eligible Azure Files SKU</h4>
-                      {filesComparisonStatus && (
-                        <span className={getComparisonBadgeClass(filesComparisonStatus)}>{filesComparisonStatus}</span>
-                      )}
-                    </div>
-                    <p className="recommended-card-value">
-                      {trackBBestFilesOutcome ? trackBBestFilesOutcome.title : "No eligible Azure Files SKU"}
-                    </p>
-                    {trackBBestFilesReadiness && (
-                      <>
-                        <p className="recommended-card-readiness">
-                          Readiness: {trackBBestFilesDisplayReadinessState}
-                        </p>
-                        {trackBBestFilesDisplayReadinessReasons.length > 0 && (
-                          <>
-                            <h5 className="recommended-card-subheading">Readiness reasons</h5>
-                            <ul className="readiness-reasons-list">
-                              {trackBBestFilesDisplayReadinessReasons.map((reason, index) => (
-                                <li key={`trackb-files-readiness-${index}`}>{reason}</li>
-                              ))}
-                            </ul>
-                          </>
-                        )}
-                      </>
-                    )}
-                    <h5 className="recommended-card-subheading">Why was this SKU recommended?</h5>
-                    <ol className="recommended-logic-list">
-                      {trackBFilesRecommendationReasons.map((reason, index) => (
-                        <li key={`trackb-files-reason-${index}`}>{reason}</li>
-                      ))}
-                    </ol>
-                    <button type="button" className="wave-plan-btn">Add to wave plan</button>
-                  </article>
-                )}
-
-                {trackBVisibleCandidateTypes.has("alt") && alternativeTrackBOutcome && (
-                  <article className="recommended-card">
-                    <div className="recommended-title-row">
-                      <h4 className="recommended-card-title">Additional selected-service option</h4>
-                      <span className={getReadinessBadgeClass("Ready with Condition")}>Ready with Condition</span>
-                      <span className="result-badge" aria-label="Readiness maximised">
-                        Readiness maximised
-                      </span>
-                    </div>
-                    <p className="recommended-card-value">{alternativeTrackBOutcome.title}</p>
-                    <p className="recommended-card-readiness">Readiness: Ready with Condition</p>
-                    {alternativeTrackBDisplayConditions.length > 0 && (
-                      <>
-                        <h5 className="recommended-card-subheading">Readiness reasons</h5>
-                        <ul className="readiness-reasons-list">
-                          {alternativeTrackBDisplayConditions.map((reason, index) => (
-                            <li key={`trackb-rec-alt-condition-${index}`}>{reason}</li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-                    <h5 className="recommended-card-subheading">
-                      {blobOutcomeSet.has(alternativeTrackBOutcome.id)
-                        ? "Why was this access tier recommended?"
-                        : "Why was this SKU recommended?"}
-                    </h5>
-                    <ol className="recommended-logic-list">
-                      {alternativeTrackBRecommendationReasons.map((reason, index) => (
-                        <li key={`trackb-rec-alt-reason-${index}`}>{reason}</li>
-                      ))}
-                    </ol>
-                    <button type="button" className="wave-plan-btn">Add to wave plan</button>
-                  </article>
-                )}
-              </div>
-
-              </section>
-            </details>
-          )}
-
-          {SHOW_ADDITIONAL_TARGET_OPTION && maximizeReadinessAcrossTargets && alternativeTrackBOutcome && (
-            <details className="assessed-options-disclosure">
-              <summary className="assessed-options-summary">ADDITIONAL TARGET OPTION (MAXIMISE READINESS)</summary>
-              <section className="recommended-section" aria-label="Track B additional target option">
-                <div className="recommended-grid">
-                  <article className="recommended-card">
-                    <div className="recommended-title-row">
-                      <h4 className="recommended-card-title">Additional selected-service option</h4>
-                      <span className={getReadinessBadgeClass("Ready with Condition")}>Ready with Condition</span>
-                      <span className="result-badge" aria-label="Readiness maximised">
-                        Readiness maximised
-                      </span>
-                    </div>
-                    <p className="recommended-card-value">{alternativeTrackBOutcome.title}</p>
-                    <p className="recommended-card-readiness">Readiness: Ready with Condition</p>
-                    {alternativeTrackBDisplayConditions.length > 0 && (
-                      <>
-                        <h5 className="recommended-card-subheading">Readiness reasons</h5>
-                        <ul className="readiness-reasons-list">
-                          {alternativeTrackBDisplayConditions.map((reason, index) => (
-                            <li key={`trackb-alt-condition-${index}`}>{reason}</li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-                    <h5 className="recommended-card-subheading">
-                      {blobOutcomeSet.has(alternativeTrackBOutcome.id)
-                        ? "Why was this access tier recommended?"
-                        : "Why was this SKU recommended?"}
-                    </h5>
-                    <ol className="recommended-logic-list">
-                      {alternativeTrackBRecommendationReasons.map((reason, index) => (
-                        <li key={`trackb-alt-reason-${index}`}>{reason}</li>
-                      ))}
-                    </ol>
-                    <button type="button" className="wave-plan-btn">Add to wave plan</button>
-                  </article>
-                </div>
-              </section>
-            </details>
-          )}
-
-          {trackBEvaluatedOutcomes.length === 0 ? (
-            <p className="no-results">
-              Track B did not return evaluated SKUs/tier for the current selection.
-            </p>
-          ) : (
-            <details className="assessed-options-disclosure">
-              <summary className="assessed-options-summary">Options that were assessed</summary>
-
-              <div className="assessed-options-content">
-                {!trackBHasReadyOrConditionalOutcome && (
-                  <p className="no-results">
-                    All Track B evaluated SKUs/tier are currently marked as Not Ready for the selected inputs.
-                  </p>
-                )}
-
-                <ul className="results-list">
-                  {orderedTrackBEvaluatedOutcomes.map((outcome) => {
-                    const outcomeTier = getOutcomeTierLabel(outcome);
-                    const redundancyAdjustment = getOutcomeRedundancyAdjustment(answers, outcome.id);
-                    const effectiveRedundancy = redundancyAdjustment?.applied ?? answers?.redundancy;
-                    const outcomeRedundancy =
-                      redundancyLabelMap[effectiveRedundancy] ?? String(effectiveRedundancy ?? "N/A");
-                    const readiness = trackBReadinessByOutcomeId.get(outcome.id);
-                    const readinessState = readiness?.readinessState ?? "Not Ready";
-                    const readinessReasons = readiness?.readinessReasons ?? ["No readiness details available."];
-
-                    return (
-                      <li key={`trackb-${outcome.id}`} className="result-item">
-                        <div className="result-title-row">
-                          <h3 className="result-title">{outcome.title}</h3>
-                          <span className={getReadinessBadgeClass(readinessState)}>{readinessState}</span>
-                          {redundancyAdjustment && redundancyAdjustment.requested !== redundancyAdjustment.applied && (
-                            <span className="result-badge" aria-label="Redundancy adjusted for compatibility">
-                              Redundancy downgraded to {redundancyLabelMap[redundancyAdjustment.applied]}
-                            </span>
-                          )}
-                          {outcome.id === blobTierRegionAdjustment?.applied && (
-                            <span className="result-badge" aria-label="Tier adjusted for regional availability">
-                              Tier upgraded from {blobTierLabelMap[blobTierRegionAdjustment.requested]}
-                            </span>
-                          )}
-                          {filesFallbackOutcomeSet.has(outcome.id) && (
-                            <span className="result-badge" aria-label="Azure Files SKU adjusted for regional availability">
-                              SKU switched due to regional availability
-                            </span>
-                          )}
-                        </div>
-                        <p className="result-meta">
-                          Tier: {outcomeTier} | Redundancy: {outcomeRedundancy} | Protocol: {getSupportedProtocolLabelForOutcome(outcome.id)}
-                        </p>
-                        <ul className="readiness-reasons-list">
-                          {readinessReasons.map((reason, index) => (
-                            <li key={`trackb-${outcome.id}-reason-${index}`}>{reason}</li>
-                          ))}
-                        </ul>
-                        <p className="result-description">{outcome.description}</p>
-                        <button type="button" className="wave-plan-btn">Add to wave plan</button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </details>
-          )}
-          </section>
-        )}
       </div>
 
       {/* Inputs summary */}
@@ -2398,6 +1895,18 @@ export default function Results({
               <dd className="summary-value">{resolveLabel(q, answers[q.id])}</dd>
             </div>
           ))}
+          {summaryOutcomeFlowItems.length > 0 && (
+            <div className="summary-row">
+              <dt className="summary-label">Outcome flow</dt>
+              <dd className="summary-value">
+                <ul>
+                  {summaryOutcomeFlowItems.map((item, index) => (
+                    <li key={`summary-outcome-flow-${index}`}>{item}</li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+          )}
         </dl>
       </div>
 

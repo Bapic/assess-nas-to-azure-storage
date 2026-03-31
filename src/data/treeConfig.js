@@ -202,6 +202,18 @@ export const questions = [
         value: "Enterprise, mission-critical and AI/ML (training, feature stores, checkpoints)",
       },
       {
+        label: "Enterprise, mission-critical",
+        value: "Enterprise, mission-critical",
+      },
+      {
+        label: "Databases and stateful app components",
+        value: "Databases and stateful app components",
+      },
+      {
+        label: "General-purpose file shares",
+        value: "General-purpose file shares",
+      },
+      {
         label: "Infrequently used (archive, backup)",
         value: "Infrequently accessed data / backup, archives retained online (compliance, historical data)",
       },
