@@ -1240,6 +1240,48 @@ export default function Results({
     );
   }
 
+  // Recommended choice flow
+  if (selectedTargetServices.size > 0) {
+    let recommendedOutcome = null;
+    let recommendedReadiness = null;
+    let recommendationLogic = "";
+
+    if (selectedTargetServices.size === 1) {
+      // Only one service selected
+      if (selectedTargetServices.has("files")) {
+        recommendedOutcome = bestFilesOutcome;
+        recommendedReadiness = bestFilesReadiness;
+        recommendationLogic = "single selected service";
+      } else if (selectedTargetServices.has("blobs")) {
+        recommendedOutcome = bestBlobOutcome;
+        recommendedReadiness = bestBlobReadiness;
+        recommendationLogic = "single selected service";
+      }
+    } else {
+      // Multiple services selected - determine priority
+      const filesReady = bestFilesReadiness?.readinessState === "Ready";
+      const blobReady = bestBlobReadiness?.readinessState === "Ready";
+
+      if (shouldRenderFilesFirst) {
+        recommendedOutcome = bestFilesOutcome;
+        recommendedReadiness = bestFilesReadiness;
+        recommendationLogic = prioritizeFilesBeforeBlob
+          ? "source NAS type prioritizes Azure Files"
+          : "readiness and availability assessment";
+      } else {
+        recommendedOutcome = bestBlobOutcome;
+        recommendedReadiness = bestBlobReadiness;
+        recommendationLogic = "readiness and availability assessment";
+      }
+    }
+
+    if (recommendedOutcome && recommendedReadiness) {
+      summaryOutcomeFlowItems.push(
+        `Recommended choice: assessment and readiness evaluation -> applied ${recommendationLogic} -> selected ${formatSkuOrTier(recommendedOutcome)} (${recommendedReadiness.readinessState})`
+      );
+    }
+  }
+
   const protocolLabelMap = {
     smb_v2: "SMB v2.x",
     smb_v3: "SMB v3.x",
