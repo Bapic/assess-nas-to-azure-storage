@@ -1185,7 +1185,8 @@ export default function Results({
     && filesOverrideCandidateIsViable
   ) {
     finalFilesOutcomeForFlow = filesOverrideCandidateOutcome;
-    filesForceFitByOverlay = (assessedFilesOutcome?.id ?? null) !== filesOverrideCandidateOutcome.id;
+    const filesOverlayStrictReadiness = readinessByOutcomeId.get(filesOverrideCandidateOutcome.id)?.readinessState ?? "Not Ready";
+    filesForceFitByOverlay = filesOverlayStrictReadiness === "Not Ready";
   }
 
   // Blobs overlay candidate
@@ -1207,7 +1208,8 @@ export default function Results({
     && blobOverrideCandidateIsViable
   ) {
     finalBlobOutcomeForFlow = blobOverrideCandidateOutcome;
-    blobForceFitByOverlay = (assessedBlobOutcome?.id ?? null) !== blobOverrideCandidateOutcome.id;
+    const blobOverlayStrictReadiness = readinessByOutcomeId.get(blobOverrideCandidateOutcome.id)?.readinessState ?? "Not Ready";
+    blobForceFitByOverlay = blobOverlayStrictReadiness === "Not Ready";
   }
 
   const filesUsedFallbackInTrackA = !assessedFilesOutcome && !!baseFilesOutcomeForFlow;
