@@ -1,5 +1,6 @@
 import { isAvailableInRegion } from "../data/regionAvailability.js";
 import { serviceOutcomeMap } from "../data/treeConfig.js";
+import { resolveWorkloadProtocolOverlay } from "../utils/overlayEngine.js";
 import {
   getOutcomeRedundancyAdjustment,
   getBlobTierRegionAdjustment,
@@ -131,6 +132,8 @@ function formatMetricValue(value) {
 function mergeReasonLists(primaryReasons = [], additionalReasons = []) {
   return [...new Set([...(primaryReasons || []), ...(additionalReasons || [])])];
 }
+
+// Overlay helpers moved to src/utils/overlayEngine.js
 
 const protocolAndApplicationFixStatement =
   "Complete protocol and application suitability fixes, then validate via POC before production migration.";
@@ -719,6 +722,10 @@ export default function Results({
     : answers?.sourceProtocol
       ? [String(answers.sourceProtocol).toLowerCase()]
       : [];
+  // Two-layer overlay: default mapping → SME override wins per service when present.
+  const activeOverlay = resolveWorkloadProtocolOverlay(answers);
+  const activeFilesOverlay = activeOverlay?.files ?? null;
+  const activeBlobOverlay = activeOverlay?.blobs ?? null;
   const sourceProtocolJoined = selectedProtocolValues.join(",");
   const sourceHasSmb =
     selectedProtocolValues.includes("smb_v2")
@@ -828,13 +835,14 @@ export default function Results({
   let bestFilesDisplayReadinessState = s3FilesCrossAssessmentEnabled
     ? "Ready with Condition"
     : bestFilesReadiness?.readinessState;
+  let bestBlobDisplayReadinessState = bestBlobReadiness?.readinessState;
   let bestFilesDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
     bestFilesDisplayReadinessState,
     bestFilesReadiness?.readinessReasons ?? [],
     s3FilesCrossAssessmentEnabled
   );
   let bestBlobDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
-    bestBlobReadiness?.readinessState,
+    bestBlobDisplayReadinessState,
     bestBlobReadiness?.readinessReasons ?? []
   );
 
@@ -1153,8 +1161,54 @@ export default function Results({
   const baseBlobOutcomeForFlow = assessedBlobOutcome ?? readinessMaximizedBlobFallbackOutcome;
   const baseFilesOutcomeForFlow = assessedFilesOutcome ?? readinessMaximizedFilesFallbackOutcome;
 
-  const finalBlobOutcomeForFlow = baseBlobOutcomeForFlow;
-  const finalFilesOutcomeForFlow = baseFilesOutcomeForFlow;
+  let finalBlobOutcomeForFlow = baseBlobOutcomeForFlow;
+  let finalFilesOutcomeForFlow = baseFilesOutcomeForFlow;
+  let filesForceFitByOverlay = false;
+  let blobForceFitByOverlay = false;
+
+  // Files overlay candidate
+  const filesOverrideCandidateOutcome = activeFilesOverlay?.preferredOutcomeId
+    ? outcomeById.get(activeFilesOverlay.preferredOutcomeId)
+    : null;
+  const filesOverrideCandidateReadiness = filesOverrideCandidateOutcome
+    ? alternativeReadinessByOutcomeId.get(filesOverrideCandidateOutcome.id)
+      ?? readinessByOutcomeId.get(filesOverrideCandidateOutcome.id)
+    : null;
+  const filesOverrideCandidateIsViable = !!filesOverrideCandidateOutcome
+    && !!filesOverrideCandidateReadiness
+    && filesOverrideCandidateReadiness.readinessState !== "Not Ready";
+
+  if (
+    effectiveFilesSelected
+    && filesOverrideCandidateOutcome
+    && filesOutcomeSet.has(filesOverrideCandidateOutcome.id)
+    && filesOverrideCandidateIsViable
+  ) {
+    finalFilesOutcomeForFlow = filesOverrideCandidateOutcome;
+    filesForceFitByOverlay = (assessedFilesOutcome?.id ?? null) !== filesOverrideCandidateOutcome.id;
+  }
+
+  // Blobs overlay candidate
+  const blobOverrideCandidateOutcome = activeBlobOverlay?.preferredOutcomeId
+    ? outcomeById.get(activeBlobOverlay.preferredOutcomeId)
+    : null;
+  const blobOverrideCandidateReadiness = blobOverrideCandidateOutcome
+    ? alternativeReadinessByOutcomeId.get(blobOverrideCandidateOutcome.id)
+      ?? readinessByOutcomeId.get(blobOverrideCandidateOutcome.id)
+    : null;
+  const blobOverrideCandidateIsViable = !!blobOverrideCandidateOutcome
+    && !!blobOverrideCandidateReadiness
+    && blobOverrideCandidateReadiness.readinessState !== "Not Ready";
+
+  if (
+    effectiveBlobsSelected
+    && blobOverrideCandidateOutcome
+    && blobOutcomeSet.has(blobOverrideCandidateOutcome.id)
+    && blobOverrideCandidateIsViable
+  ) {
+    finalBlobOutcomeForFlow = blobOverrideCandidateOutcome;
+    blobForceFitByOverlay = (assessedBlobOutcome?.id ?? null) !== blobOverrideCandidateOutcome.id;
+  }
 
   const filesUsedFallbackInTrackA = !assessedFilesOutcome && !!baseFilesOutcomeForFlow;
   const blobUsedFallbackInTrackA = !assessedBlobOutcome && !!baseBlobOutcomeForFlow;
@@ -1174,15 +1228,42 @@ export default function Results({
   bestFilesDisplayReadinessState = s3FilesCrossAssessmentEnabled
     ? "Ready with Condition"
     : bestFilesReadiness?.readinessState;
+  bestBlobDisplayReadinessState = bestBlobReadiness?.readinessState;
+
+  if (filesForceFitByOverlay) {
+    bestFilesDisplayReadinessState = "Ready with Condition";
+  }
+  if (blobForceFitByOverlay) {
+    bestBlobDisplayReadinessState = "Ready with Condition";
+  }
+
   bestFilesDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
     bestFilesDisplayReadinessState,
     bestFilesReadiness?.readinessReasons ?? [],
     s3FilesCrossAssessmentEnabled
   );
   bestBlobDisplayReadinessReasons = getReadinessReasonsWithProtocolFixLine(
-    bestBlobReadiness?.readinessState,
+    bestBlobDisplayReadinessState,
     bestBlobReadiness?.readinessReasons ?? []
   );
+
+  if (filesForceFitByOverlay && bestFilesDisplayReadinessState === "Ready with Condition") {
+    bestFilesDisplayReadinessReasons = mergeReasonLists(
+      [
+        "Preferred overlay selected a Files SKU outside the strict baseline path; this recommendation is marked Ready with Condition pending protocol/application adaptation and validation.",
+      ],
+      bestFilesDisplayReadinessReasons
+    );
+  }
+
+  if (blobForceFitByOverlay && bestBlobDisplayReadinessState === "Ready with Condition") {
+    bestBlobDisplayReadinessReasons = mergeReasonLists(
+      [
+        "Preferred overlay selected a Blob tier outside the strict baseline path; this recommendation is marked Ready with Condition pending protocol/application adaptation and validation.",
+      ],
+      bestBlobDisplayReadinessReasons
+    );
+  }
 
   blobRecommendationReasons = effectiveBlobsSelected
     ? getBlobRecommendationReasons({
@@ -1213,6 +1294,24 @@ export default function Results({
       })
     : [];
 
+  if (activeFilesOverlay && effectiveFilesSelected) {
+    const sourceLabel = activeFilesOverlay.source === "sme_override" ? "SME override" : "Default mapping overlay";
+    if (filesOverrideCandidateIsViable) {
+      filesRecommendationReasons.unshift(`${sourceLabel} applied for workload/protocol combination: ${activeFilesOverlay.reason ?? "preference rule"}.`);
+    } else {
+      filesRecommendationReasons.unshift(`${sourceLabel} matched but preferred Files outcome was not viable; base readiness-driven recommendation retained.`);
+    }
+  }
+
+  if (activeBlobOverlay && effectiveBlobsSelected) {
+    const sourceLabel = activeBlobOverlay.source === "sme_override" ? "SME override" : "Default mapping overlay";
+    if (blobOverrideCandidateIsViable) {
+      blobRecommendationReasons.unshift(`${sourceLabel} applied for workload/protocol combination: ${activeBlobOverlay.reason ?? "preference rule"}.`);
+    } else {
+      blobRecommendationReasons.unshift(`${sourceLabel} matched but preferred Blob outcome was not viable; base readiness-driven recommendation retained.`);
+    }
+  }
+
   if (blobUsedFallbackInTrackA && effectiveBlobsSelected) {
     blobRecommendationReasons.unshift(
       "Strict assessment returned no Blob tier, so readiness-maximised fallback selected the best conditioned Blob tier."
@@ -1229,14 +1328,14 @@ export default function Results({
   if (selectedTargetServices.has("blobs")) {
     const blobFallbackApplied = !assessedBlobOutcome && !!readinessMaximizedBlobFallbackOutcome;
     summaryOutcomeFlowItems.push(
-      `Azure Blobs: assessment ${formatSkuOrTier(assessedBlobOutcome)} -> readiness maximised fallback ${blobFallbackApplied ? formatSkuOrTier(readinessMaximizedBlobFallbackOutcome) : "not applied"} -> preferred workload overlay pending implementation -> final result ${formatSkuOrTier(finalBlobOutcomeForFlow)}`
+      `Azure Blobs: assessment ${formatSkuOrTier(assessedBlobOutcome)} -> readiness maximised fallback ${blobFallbackApplied ? formatSkuOrTier(readinessMaximizedBlobFallbackOutcome) : "not applied"} -> overlay [${activeBlobOverlay ? `${activeBlobOverlay.source}${activeBlobOverlay.matchType && activeBlobOverlay.matchType !== "exact" ? `:${activeBlobOverlay.matchType}` : ""}` : "not matched"}] -> final result ${formatSkuOrTier(finalBlobOutcomeForFlow)}`
     );
   }
 
   if (selectedTargetServices.has("files")) {
     const filesFallbackApplied = !assessedFilesOutcome && !!readinessMaximizedFilesFallbackOutcome;
     summaryOutcomeFlowItems.push(
-      `Azure Files: assessment ${formatSkuOrTier(assessedFilesOutcome)} -> readiness maximised fallback ${filesFallbackApplied ? formatSkuOrTier(readinessMaximizedFilesFallbackOutcome) : "not applied"} -> preferred workload overlay pending implementation -> final result ${formatSkuOrTier(finalFilesOutcomeForFlow)}`
+      `Azure Files: assessment ${formatSkuOrTier(assessedFilesOutcome)} -> readiness maximised fallback ${filesFallbackApplied ? formatSkuOrTier(readinessMaximizedFilesFallbackOutcome) : "not applied"} -> overlay [${activeFilesOverlay ? `${activeFilesOverlay.source}${activeFilesOverlay.matchType && activeFilesOverlay.matchType !== "exact" ? `:${activeFilesOverlay.matchType}` : ""}` : "not matched"}] -> final result ${formatSkuOrTier(finalFilesOutcomeForFlow)}`
     );
   }
 
@@ -1346,12 +1445,36 @@ export default function Results({
   const protocolContextBannerLine1 = "NetApp ONTAP AFF and NetApp ONTAP FAS NAS appliances are a File system based architecture that exposes various shares supporting multiple protocols including NFS v3 and S3. Hence NFS v3 and S3 shares are also assessed as another shares against Azure Files and performance and scale targets were applied. In some scenarios, you can also implement sharding on Azure Files shares to meet scalability requirements across Azure file shares.";
   const protocolContextBannerLine2 = "In the current case you may see Azure Blob as recommended, when source protocol is either NFS v3 or S3, purely because of protocol support and object type access. You can review Azure Files path SKU suitability and create your migration plan accordingly.";
   const shouldPrioritizeBlobInTrackARecommended = effectiveBlobAccessFrequency === "archive";
+  const shouldPrioritizeFilesFromSmeOverride = !!activeFilesOverlay;
+  const shouldPrioritizeBlobsFromSmeOverride = !!activeBlobOverlay;
+
+  if (shouldPrioritizeBlobInTrackARecommended && effectiveBlobsSelected) {
+    blobRecommendationReasons.unshift(
+      "Hardly/Never access frequency was selected, so Azure Blob Archive is prioritised in the Recommended section for long-term retention and lowest-cost storage. If Archive is unavailable or not viable, the nearest viable Blob tier is retained."
+    );
+  }
 
   function applyTrackABlobPriorityForArchiveAccess(basePriority, candidateType, isBlobAlternative = false) {
     if (!shouldPrioritizeBlobInTrackARecommended) return basePriority;
     if (candidateType === "blob" || (candidateType === "alt" && isBlobAlternative)) {
-      return basePriority - 10;
+        return basePriority - 40;
     }
+    return basePriority;
+  }
+
+  function applyTrackASmeOverridePriority(basePriority, candidateType, isBlobAlternative = false, isFilesAlternative = false) {
+    if (shouldPrioritizeBlobsFromSmeOverride) {
+      if (candidateType === "blob" || (candidateType === "alt" && isBlobAlternative)) {
+        return basePriority - 20;
+      }
+    }
+
+    if (shouldPrioritizeFilesFromSmeOverride) {
+      if (candidateType === "files" || (candidateType === "alt" && isFilesAlternative)) {
+        return basePriority - 20;
+      }
+    }
+
     return basePriority;
   }
 
@@ -1359,31 +1482,46 @@ export default function Results({
     ...(effectiveFilesSelected && bestFilesOutcome
       ? [{
           type: "files",
-          priority: applyTrackABlobPriorityForArchiveAccess(getRecommendedCardPriority({
-            readinessState: bestFilesDisplayReadinessState,
-            isRecommended: true,
-            isReadinessMaximised: false,
-          }), "files"),
+          priority: applyTrackASmeOverridePriority(
+            applyTrackABlobPriorityForArchiveAccess(getRecommendedCardPriority({
+              readinessState: bestFilesDisplayReadinessState,
+              isRecommended: true,
+              isReadinessMaximised: false,
+            }), "files"),
+            "files",
+            false,
+            false
+          ),
         }]
       : []),
     ...(effectiveBlobsSelected && bestBlobOutcome
       ? [{
           type: "blob",
-          priority: applyTrackABlobPriorityForArchiveAccess(getRecommendedCardPriority({
-            readinessState: bestBlobReadiness?.readinessState,
-            isRecommended: true,
-            isReadinessMaximised: false,
-          }), "blob"),
+          priority: applyTrackASmeOverridePriority(
+            applyTrackABlobPriorityForArchiveAccess(getRecommendedCardPriority({
+              readinessState: bestBlobDisplayReadinessState,
+              isRecommended: true,
+              isReadinessMaximised: false,
+            }), "blob"),
+            "blob",
+            false,
+            false
+          ),
         }]
       : []),
     ...(alternativeTrackAOutcome
       ? [{
           type: "alt",
-          priority: applyTrackABlobPriorityForArchiveAccess(getRecommendedCardPriority({
-            readinessState: "Ready with Condition",
-            isRecommended: false,
-            isReadinessMaximised: true,
-          }), "alt", blobOutcomeSet.has(alternativeTrackAOutcome.id)),
+          priority: applyTrackASmeOverridePriority(
+            applyTrackABlobPriorityForArchiveAccess(getRecommendedCardPriority({
+              readinessState: "Ready with Condition",
+              isRecommended: false,
+              isReadinessMaximised: true,
+            }), "alt", blobOutcomeSet.has(alternativeTrackAOutcome.id)),
+            "alt",
+            blobOutcomeSet.has(alternativeTrackAOutcome.id),
+            filesOutcomeSet.has(alternativeTrackAOutcome.id)
+          ),
         }]
       : []),
   ];
@@ -1413,7 +1551,7 @@ export default function Results({
   }
 
   if (trackAVisibleCandidateTypes.has("blob") && bestBlobOutcome) {
-    const blobReadinessState = bestBlobReadiness?.readinessState ?? "Not Ready";
+    const blobReadinessState = bestBlobDisplayReadinessState ?? "Not Ready";
     const firstReason = blobRecommendationReasons.length > 0 ? blobRecommendationReasons[0] : "best eligible option";
     recommendedFlowEntries.push(
       `Best Eligible Azure Blob Access Tier: ${bestBlobOutcome.title} (${blobReadinessState}) - ${firstReason}`
@@ -1560,8 +1698,8 @@ export default function Results({
                     <div className="recommended-title-row">
                       <h4 className="recommended-card-title">Best Eligible Azure Blob Access Tier</h4>
                       {bestBlobReadiness && (
-                        <span className={getReadinessBadgeClass(bestBlobReadiness.readinessState)}>
-                          {bestBlobReadiness.readinessState}
+                        <span className={getReadinessBadgeClass(bestBlobDisplayReadinessState)}>
+                          {bestBlobDisplayReadinessState}
                         </span>
                       )}
                     </div>
@@ -1571,7 +1709,7 @@ export default function Results({
                     {bestBlobReadiness && (
                       <>
                         <p className="recommended-card-readiness">
-                          Readiness: {bestBlobReadiness.readinessState}
+                          Readiness: {bestBlobDisplayReadinessState}
                         </p>
                         {bestBlobDisplayReadinessReasons.length > 0 && (
                           <>
@@ -1600,8 +1738,8 @@ export default function Results({
                     <div className="recommended-title-row">
                       <h4 className="recommended-card-title">Best Eligible Azure Files SKU</h4>
                       {bestFilesReadiness && (
-                        <span className={getReadinessBadgeClass(s3FilesCrossAssessmentEnabled ? "Ready with Condition" : bestFilesReadiness.readinessState)}>
-                          {s3FilesCrossAssessmentEnabled ? "Ready with Condition" : bestFilesReadiness.readinessState}
+                        <span className={getReadinessBadgeClass(bestFilesDisplayReadinessState)}>
+                          {bestFilesDisplayReadinessState}
                         </span>
                       )}
                     </div>
@@ -1680,21 +1818,38 @@ export default function Results({
               ) : (
                 <div className="recommended-grid">
                   {topFilesServiceOutcomes.map((outcome) => {
-                    const readiness = readinessByOutcomeId.get(outcome.id);
+                    const readiness = alternativeReadinessByOutcomeId.get(outcome.id)
+                      ?? readinessByOutcomeId.get(outcome.id);
                     const readinessState = readiness?.readinessState ?? "Not Ready";
                     const isReadinessMaximised = alternativeTrackAOutcome?.id === outcome.id;
-                    const displayReadinessState = isReadinessMaximised
+                    const isOverlayForceFit =
+                      filesForceFitByOverlay
+                      && outcome.id === bestFilesOutcome?.id
+                      && !isReadinessMaximised;
+                    const baseDisplayReadinessState = isReadinessMaximised
                       ? "Ready with Condition"
                       : s3FilesCrossAssessmentEnabled
                         ? "Ready with Condition"
                         : readinessState;
-                    const displayReadinessReasons = isReadinessMaximised
+                    const displayReadinessState =
+                      isOverlayForceFit
+                        ? "Ready with Condition"
+                        : baseDisplayReadinessState;
+                    let displayReadinessReasons = isReadinessMaximised
                       ? alternativeTrackADisplayConditions
                       : getReadinessReasonsWithProtocolFixLine(
                           displayReadinessState,
                           readiness?.readinessReasons ?? [],
                           s3FilesCrossAssessmentEnabled
                         );
+                    if (isOverlayForceFit && displayReadinessState === "Ready with Condition") {
+                      displayReadinessReasons = mergeReasonLists(
+                        [
+                          "Preferred overlay selected a Files SKU outside the strict baseline path; this recommendation is marked Ready with Condition pending protocol/application adaptation and validation.",
+                        ],
+                        displayReadinessReasons
+                      );
+                    }
                     const recommendationReasons = isReadinessMaximised
                       ? alternativeTrackARecommendationReasons
                       : getFilesRecommendationReasons({
@@ -1752,18 +1907,35 @@ export default function Results({
               ) : (
                 <div className="recommended-grid">
                   {topBlobServiceOutcomes.map((outcome) => {
-                    const readiness = readinessByOutcomeId.get(outcome.id);
+                    const readiness = alternativeReadinessByOutcomeId.get(outcome.id)
+                      ?? readinessByOutcomeId.get(outcome.id);
                     const readinessState = readiness?.readinessState ?? "Not Ready";
                     const isReadinessMaximised = alternativeTrackAOutcome?.id === outcome.id;
-                    const displayReadinessState = isReadinessMaximised
+                    const isOverlayForceFit =
+                      blobForceFitByOverlay
+                      && outcome.id === bestBlobOutcome?.id
+                      && !isReadinessMaximised;
+                    const baseDisplayReadinessState = isReadinessMaximised
                       ? "Ready with Condition"
                       : readinessState;
-                    const displayReadinessReasons = isReadinessMaximised
+                    const displayReadinessState =
+                      isOverlayForceFit
+                        ? "Ready with Condition"
+                        : baseDisplayReadinessState;
+                    let displayReadinessReasons = isReadinessMaximised
                       ? alternativeTrackADisplayConditions
                       : getReadinessReasonsWithProtocolFixLine(
-                          readinessState,
+                          displayReadinessState,
                           readiness?.readinessReasons ?? []
                         );
+                    if (isOverlayForceFit && displayReadinessState === "Ready with Condition") {
+                      displayReadinessReasons = mergeReasonLists(
+                        [
+                          "Preferred overlay selected a Blob tier outside the strict baseline path; this recommendation is marked Ready with Condition pending protocol/application adaptation and validation.",
+                        ],
+                        displayReadinessReasons
+                      );
+                    }
                     const recommendationReasons = isReadinessMaximised
                       ? alternativeTrackARecommendationReasons
                       : getBlobRecommendationReasons({

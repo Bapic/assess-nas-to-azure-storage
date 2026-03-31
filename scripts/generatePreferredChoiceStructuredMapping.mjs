@@ -38,12 +38,20 @@ const protocolMap = {
   "NFS and S3": ["nfs_v3", "nfs_v41", "s3"],
   "SMB, NFS and S3": ["smb_v2", "smb_v3", "nfs_v3", "nfs_v41", "s3"],
   "SMB NFS and S3": ["smb_v2", "smb_v3", "nfs_v3", "nfs_v41", "s3"],
+  "NFS 3 and S3": ["nfs_v3", "s3"],
+  "NFS 4.1 and S3": ["nfs_v41", "s3"],
+  "SMB 3.x and S3": ["smb_v3", "s3"],
+  "SMB 2.x and S3": ["smb_v2", "s3"],
 };
 
 const protocolKeyToLabel = {
   "smb_v2+smb_v3": "SMB 2.x, 3.x",
   "nfs_v3+nfs_v41": "NFS 3, 4.1",
   "smb_v2+smb_v3+nfs_v3+nfs_v41+s3": "SMB, NFS and S3",
+  "nfs_v3+s3": "NFS 3 and S3",
+  "nfs_v41+s3": "NFS 4.1 and S3",
+  "s3+smb_v3": "SMB 3.x and S3",
+  "s3+smb_v2": "SMB 2.x and S3",
 };
 
 const expectedWorkloadProfiles = {
@@ -85,7 +93,8 @@ const expectedWorkloadProfiles = {
   },
 };
 
-const expectedProtocolLabels = [
+// Required: full workload × protocol coverage enforced by validator
+const requiredProtocolLabels = [
   "SMB 2.x, 3.x",
   "SMB 2.x",
   "SMB 3.x",
@@ -98,6 +107,16 @@ const expectedProtocolLabels = [
   "NFS and S3",
   "SMB, NFS and S3",
 ];
+
+// Extended: additional combinations allowed but not required for every workload
+const extendedProtocolLabels = [
+  "NFS 3 and S3",
+  "NFS 4.1 and S3",
+  "SMB 3.x and S3",
+  "SMB 2.x and S3",
+];
+
+const allowedProtocolLabels = [...requiredProtocolLabels, ...extendedProtocolLabels];
 
 function normalizeProtocolLabel(rawLabel) {
   const normalized = String(rawLabel ?? "")
@@ -132,10 +151,11 @@ function validateStructuredRows(rows) {
   }
 
   const expectedWorkloads = Object.keys(expectedWorkloadProfiles);
-  const protocolSet = new Set(expectedProtocolLabels);
-  const expectedRowCount = expectedWorkloads.length * expectedProtocolLabels.length;
+  const allowedProtocolSet = new Set(allowedProtocolLabels);
+  const requiredProtocolSet = new Set(requiredProtocolLabels);
+  const minExpectedRowCount = expectedWorkloads.length * requiredProtocolLabels.length;
   const seenPairs = new Set();
-  const coverage = new Map(expectedWorkloads.map((wl) => [wl, new Set()]));
+  const requiredCoverage = new Map(expectedWorkloads.map((wl) => [wl, new Set()]));
 
   for (const row of rows) {
     const workloadType = String(row?.workloadType ?? "").trim();
@@ -147,8 +167,8 @@ function validateStructuredRows(rows) {
     if (!expectedWorkloadProfiles[workloadType]) {
       throw new Error(`Unexpected workload type in structured mapping: "${workloadType}"`);
     }
-    if (!protocolSet.has(sourceProtocolLabel)) {
-      throw new Error(`Unexpected source protocol in structured mapping: "${sourceProtocolLabel}"`);
+    if (!allowedProtocolSet.has(sourceProtocolLabel)) {
+      throw new Error(`Unexpected source protocol in structured mapping: "${sourceProtocolLabel}". Add it to extendedProtocolLabels if intentional.`);
     }
     if (!recommendation) {
       throw new Error(`Missing recommendation text for workload "${workloadType}" and protocol "${sourceProtocolLabel}".`);
@@ -162,18 +182,23 @@ function validateStructuredRows(rows) {
       throw new Error(`Duplicate structured mapping row for workload/protocol pair: ${key}`);
     }
     seenPairs.add(key);
-    coverage.get(workloadType)?.add(sourceProtocolLabel);
+
+    // Track coverage only for required protocol labels
+    if (requiredProtocolSet.has(sourceProtocolLabel)) {
+      requiredCoverage.get(workloadType)?.add(sourceProtocolLabel);
+    }
   }
 
-  if (rows.length !== expectedRowCount) {
-    throw new Error(`Structured mapping row count mismatch: expected ${expectedRowCount}, found ${rows.length}.`);
+  if (rows.length < minExpectedRowCount) {
+    throw new Error(`Structured mapping row count below minimum: expected at least ${minExpectedRowCount} (core coverage), found ${rows.length}.`);
   }
 
+  // Enforce full coverage only for required protocol labels
   for (const workloadType of expectedWorkloads) {
-    const labels = coverage.get(workloadType) ?? new Set();
-    for (const protocolLabel of expectedProtocolLabels) {
+    const labels = requiredCoverage.get(workloadType) ?? new Set();
+    for (const protocolLabel of requiredProtocolLabels) {
       if (!labels.has(protocolLabel)) {
-        throw new Error(`Missing workload/protocol mapping: ${workloadType} / ${protocolLabel}`);
+        throw new Error(`Missing required workload/protocol mapping: ${workloadType} / ${protocolLabel}`);
       }
     }
   }
@@ -182,7 +207,7 @@ function validateStructuredRows(rows) {
 function toFlatRows(rows) {
   const expectedWorkloads = Object.keys(expectedWorkloadProfiles);
   const workloadOrder = new Map(expectedWorkloads.map((wl, idx) => [wl, idx]));
-  const protocolOrder = new Map(expectedProtocolLabels.map((label, idx) => [label, idx]));
+  const protocolOrder = new Map(allowedProtocolLabels.map((label, idx) => [label, idx]));
 
   const canonicalRows = rows
     .map((row) => ({

@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "updatedAt": "2026-03-31T00:00:00.000Z",
+
+  "_instructions": {
+    "purpose": "SME preference overrides. Each entry here wins over the default workload+protocol preference defined in preferred_choice_structured_mapping.json.",
+    "when_to_add": "Add an entry when the default mapping recommendation for a specific workload+protocol combination needs to be changed without touching the base mapping file.",
+    "precedence": "overlay engine runs: (1) preferred_choice_structured_mapping.json default -> (2) active entry in this file wins if matched.",
+    "fields": {
+      "id":                 "Unique identifier. Convention: override-YYYYMMDD-NNN (e.g. override-20260401-001).",
+      "workload":           "Must exactly match one of the workloadType values in preferred_choice_structured_mapping.json. See valid values below in _validWorkloads.",
+      "protocol":           "Array of protocol values that must ALL be present in the assessment. Order does not matter — engine sorts before matching. See valid values in _validProtocols.",
+      "overridePreference": "Which service to prefer: 'files' or 'blobs'.",
+      "preferredOutcomeId": "The specific SKU/tier to recommend. Must be one of: 'files-premium-ssd', 'files-standard-hdd', 'blob-hot', 'blob-cool', 'blob-cold', 'blob-archive'. Set to null to prefer the service without pinning a specific outcome.",
+      "reason":             "Plain-English explanation of why this override exists. Shown in the recommendation card.",
+      "status":             "'active' (applied) or 'inactive' (ignored). Use 'inactive' to suspend without deleting.",
+      "effectiveDate":      "ISO date string YYYY-MM-DD. Override is ignored before this date. Omit or set null to apply immediately.",
+      "expiryDate":         "ISO date string YYYY-MM-DD. Override is ignored after this date. Omit or set null to never expire.",
+      "createdAt":          "ISO timestamp, informational only.",
+      "updatedAt":          "ISO timestamp, informational only."
+    },
+    "_validWorkloads": [
+      "AI/ML workloads (training, features etc.)",
+      "Enterprise, mission-critical",
+      "Databases and stateful app components",
+      "General-purpose file shares",
+      "Infrequently used (archive, backup)",
+      "Mixed workloads (various workloads combinations)"
+    ],
+    "_validProtocols": [
+      "smb_v2",
+      "smb_v3",
+      "nfs_v3",
+      "nfs_v41",
+      "s3"
+    ]
+  },
+
+  "_template": {
+    "_comment":           "Copy this block into the 'overrides' array, remove this _comment field, and fill in your values.",
+    "id":                 "override-YYYYMMDD-001",
+    "workload":           "< one of _validWorkloads above >",
+    "protocol":           ["< one or more _validProtocols above >"],
+    "overridePreference": "< files | blobs >",
+    "preferredOutcomeId": "< files-premium-ssd | files-standard-hdd | blob-hot | blob-cool | blob-cold | blob-archive | null >",
+    "reason":             "< why this override exists >",
+    "status":             "active",
+    "effectiveDate":      null,
+    "expiryDate":         null,
+    "createdAt":          "2026-01-01T00:00:00.000Z",
+    "updatedAt":          "2026-01-01T00:00:00.000Z"
+  },
+
+  "overrides": []
+}
+

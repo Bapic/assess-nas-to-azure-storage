@@ -9,20 +9,23 @@
     ],
     "sourceProtocolKey": "smb_v2+smb_v3",
     "preferredFilesOutcomeId": "files-premium-ssd",
-    "preferredBlobOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-hot",
     "preferredChoiceRule": "trackB_preferred_choice_v2",
     "source": {
       "filesMediaTendency": "SSD (Premium v2)",
       "blobTierTendency": "Hot (default), Cool or other as selected by the user",
-      "originalRecommendationText": "Azure Files Premium SSD"
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads; Azure Files Premium SSD remains secondary when file-protocol compatibility is required."
     },
-    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredCombinedOutcomeId": "blob-hot",
     "preferredBySelectedTargets": {
       "filesOnly": [
         "files-premium-ssd"
       ],
-      "blobsOnly": [],
+      "blobsOnly": [
+        "blob-hot"
+      ],
       "filesAndBlobs": [
+        "blob-hot",
         "files-premium-ssd"
       ]
     },
@@ -51,7 +54,7 @@
     "contextualPreferenceRules": [
       {
         "context": "workload+protocol",
-        "reason": "AI/ML workloads (training, features etc.) with SMB requires consistent locking and high IOPS—Files is optimized for SMB",
+        "reason": "AI/ML workloads (training, features etc.) prefer Azure Blob Hot for scalable object access, large dataset handling, and AI/ML data lake style workflows; Azure Files remains secondary when protocol/application constraints require a file path.",
         "appliesWhen": {
           "workload": "AI/ML workloads (training, features etc.)",
           "protocol": [
@@ -61,10 +64,16 @@
         },
         "preferenceRanking": [
           {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across smb_v2, smb_v3 protocol selections due to object-scale access patterns and dataset-oriented storage."
+          },
+          {
             "serviceName": "files",
             "preferredOutcomeId": "files-premium-ssd",
-            "priority": 1,
-            "rationale": "Files provides optimized performance and protocol support for SMB 2.x, 3.x"
+            "priority": 2,
+            "rationale": "Azure Files Premium SSD remains a secondary option when smb_v2, smb_v3 workflows need SMB/NFS-compatible file semantics or application constraints require a file path."
           }
         ]
       }
@@ -79,20 +88,23 @@
     ],
     "sourceProtocolKey": "smb_v2",
     "preferredFilesOutcomeId": "files-premium-ssd",
-    "preferredBlobOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-hot",
     "preferredChoiceRule": "trackB_preferred_choice_v2",
     "source": {
       "filesMediaTendency": "SSD (Premium v2)",
       "blobTierTendency": "Hot (default), Cool or other as selected by the user",
-      "originalRecommendationText": "Azure Files Premium SSD"
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads; Azure Files Premium SSD remains secondary when file-protocol compatibility is required."
     },
-    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredCombinedOutcomeId": "blob-hot",
     "preferredBySelectedTargets": {
       "filesOnly": [
         "files-premium-ssd"
       ],
-      "blobsOnly": [],
+      "blobsOnly": [
+        "blob-hot"
+      ],
       "filesAndBlobs": [
+        "blob-hot",
         "files-premium-ssd"
       ]
     },
@@ -121,7 +133,7 @@
     "contextualPreferenceRules": [
       {
         "context": "workload+protocol",
-        "reason": "AI/ML workloads (training, features etc.) with SMB requires consistent locking and high IOPS—Files is optimized for SMB",
+        "reason": "AI/ML workloads (training, features etc.) prefer Azure Blob Hot for scalable object access, large dataset handling, and AI/ML data lake style workflows; Azure Files remains secondary when protocol/application constraints require a file path.",
         "appliesWhen": {
           "workload": "AI/ML workloads (training, features etc.)",
           "protocol": [
@@ -130,10 +142,16 @@
         },
         "preferenceRanking": [
           {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across smb_v2 protocol selections due to object-scale access patterns and dataset-oriented storage."
+          },
+          {
             "serviceName": "files",
             "preferredOutcomeId": "files-premium-ssd",
-            "priority": 1,
-            "rationale": "Files provides optimized performance and protocol support for SMB 2.x"
+            "priority": 2,
+            "rationale": "Azure Files Premium SSD remains a secondary option when smb_v2 workflows need SMB/NFS-compatible file semantics or application constraints require a file path."
           }
         ]
       }
@@ -148,20 +166,23 @@
     ],
     "sourceProtocolKey": "smb_v3",
     "preferredFilesOutcomeId": "files-premium-ssd",
-    "preferredBlobOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-hot",
     "preferredChoiceRule": "trackB_preferred_choice_v2",
     "source": {
       "filesMediaTendency": "SSD (Premium v2)",
       "blobTierTendency": "Hot (default), Cool or other as selected by the user",
-      "originalRecommendationText": "Azure Files Premium SSD"
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads; Azure Files Premium SSD remains secondary when file-protocol compatibility is required."
     },
-    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredCombinedOutcomeId": "blob-hot",
     "preferredBySelectedTargets": {
       "filesOnly": [
         "files-premium-ssd"
       ],
-      "blobsOnly": [],
+      "blobsOnly": [
+        "blob-hot"
+      ],
       "filesAndBlobs": [
+        "blob-hot",
         "files-premium-ssd"
       ]
     },
@@ -190,7 +211,7 @@
     "contextualPreferenceRules": [
       {
         "context": "workload+protocol",
-        "reason": "AI/ML workloads (training, features etc.) with SMB requires consistent locking and high IOPS—Files is optimized for SMB",
+        "reason": "AI/ML workloads (training, features etc.) prefer Azure Blob Hot for scalable object access, large dataset handling, and AI/ML data lake style workflows; Azure Files remains secondary when protocol/application constraints require a file path.",
         "appliesWhen": {
           "workload": "AI/ML workloads (training, features etc.)",
           "protocol": [
@@ -199,11 +220,18 @@
         },
         "preferenceRanking": [
           {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across smb_v3 protocol selections due to object-scale access patterns and dataset-oriented storage."
+          },
+          {
             "serviceName": "files",
             "preferredOutcomeId": "files-premium-ssd",
-            "priority": 1,
-            "rationale": "Files provides optimized performance and protocol support for SMB 3.x"
+            "priority": 2,
+            "rationale": "Azure Files Premium SSD remains a secondary option when smb_v3 workflows need SMB/NFS-compatible file semantics or application constraints require a file path."
           }
+
         ]
       }
     ]
@@ -223,9 +251,9 @@
     "source": {
       "filesMediaTendency": "SSD (Premium v2)",
       "blobTierTendency": "Hot (default), Cool or other as selected by the user",
-      "originalRecommendationText": "First Azure Blob (Hot) if NFS v3 then Azure Files Premium SSD for NFS 4.1 and also if Blob is not suitable or eligible for Azure Blob Storage"
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads; Azure Files Premium SSD remains secondary when file-protocol compatibility is required."
     },
-    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredCombinedOutcomeId": "blob-hot",
     "preferredBySelectedTargets": {
       "filesOnly": [
         "files-premium-ssd"
@@ -234,8 +262,8 @@
         "blob-hot"
       ],
       "filesAndBlobs": [
-        "files-premium-ssd",
-        "blob-hot"
+        "blob-hot",
+        "files-premium-ssd"
       ]
     },
     "recommendationPolicy": {
@@ -263,7 +291,7 @@
     "contextualPreferenceRules": [
       {
         "context": "workload+protocol",
-        "reason": "AI/ML workloads (training, features etc.) with NFS 4.1—Files Premium SSD provides optimized performance",
+        "reason": "AI/ML workloads (training, features etc.) prefer Azure Blob Hot for scalable object access, large dataset handling, and AI/ML data lake style workflows; Azure Files remains secondary when protocol/application constraints require a file path.",
         "appliesWhen": {
           "workload": "AI/ML workloads (training, features etc.)",
           "protocol": [
@@ -273,16 +301,16 @@
         },
         "preferenceRanking": [
           {
-            "serviceName": "files",
-            "preferredOutcomeId": "files-premium-ssd",
-            "priority": 1,
-            "rationale": "Files provides optimized performance and protocol support for NFS 3, 4.1"
-          },
-          {
             "serviceName": "blobs",
             "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across nfs_v3, nfs_v41 protocol selections due to object-scale access patterns and dataset-oriented storage."
+          },
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
             "priority": 2,
-            "rationale": "Alternative if primary service is not viable"
+            "rationale": "Azure Files Premium SSD remains a secondary option when nfs_v3, nfs_v41 workflows need SMB/NFS-compatible file semantics or application constraints require a file path."
           }
         ]
       }
@@ -302,7 +330,7 @@
     "source": {
       "filesMediaTendency": "SSD (Premium v2)",
       "blobTierTendency": "Hot (default), Cool or other as selected by the user",
-      "originalRecommendationText": "Azure Files Premium SSD"
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads."
     },
     "preferredCombinedOutcomeId": "blob-hot",
     "preferredBySelectedTargets": {
@@ -339,7 +367,7 @@
     "contextualPreferenceRules": [
       {
         "context": "workload+protocol",
-        "reason": "AI/ML workloads (training, features etc.) with NFS v3—Blob Hot tier offers better compatibility and cost efficiency",
+        "reason": "AI/ML workloads (training, features etc.) are Blob-first for scalable object access, large dataset handling, and AI/ML data lake style workflows.",
         "appliesWhen": {
           "workload": "AI/ML workloads (training, features etc.)",
           "protocol": [
@@ -351,7 +379,7 @@
             "serviceName": "blobs",
             "preferredOutcomeId": "blob-hot",
             "priority": 1,
-            "rationale": "Blob provides optimal tier and scale for NFS 3"
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across nfs_v3 protocol selections due to object-scale access patterns and dataset-oriented storage."
           }
         ]
       }
@@ -366,20 +394,23 @@
     ],
     "sourceProtocolKey": "nfs_v41",
     "preferredFilesOutcomeId": "files-premium-ssd",
-    "preferredBlobOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-hot",
     "preferredChoiceRule": "trackB_preferred_choice_v2",
     "source": {
       "filesMediaTendency": "SSD (Premium v2)",
       "blobTierTendency": "Hot (default), Cool or other as selected by the user",
-      "originalRecommendationText": "Azure Files Premium SSD for NFS 4.1"
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads; Azure Files Premium SSD remains secondary when file-protocol compatibility is required."
     },
-    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredCombinedOutcomeId": "blob-hot",
     "preferredBySelectedTargets": {
       "filesOnly": [
         "files-premium-ssd"
       ],
-      "blobsOnly": [],
+      "blobsOnly": [
+        "blob-hot"
+      ],
       "filesAndBlobs": [
+        "blob-hot",
         "files-premium-ssd"
       ]
     },
@@ -408,7 +439,7 @@
     "contextualPreferenceRules": [
       {
         "context": "workload+protocol",
-        "reason": "AI/ML workloads (training, features etc.) with NFS 4.1—Files Premium SSD provides optimized performance",
+        "reason": "AI/ML workloads (training, features etc.) prefer Azure Blob Hot for scalable object access, large dataset handling, and AI/ML data lake style workflows; Azure Files remains secondary when protocol/application constraints require a file path.",
         "appliesWhen": {
           "workload": "AI/ML workloads (training, features etc.)",
           "protocol": [
@@ -417,10 +448,16 @@
         },
         "preferenceRanking": [
           {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across nfs_v41 protocol selections due to object-scale access patterns and dataset-oriented storage."
+          },
+          {
             "serviceName": "files",
             "preferredOutcomeId": "files-premium-ssd",
-            "priority": 1,
-            "rationale": "Files provides optimized performance and protocol support for NFS 4.1"
+            "priority": 2,
+            "rationale": "Azure Files Premium SSD remains a secondary option when nfs_v41 workflows need SMB/NFS-compatible file semantics or application constraints require a file path."
           }
         ]
       }
@@ -440,7 +477,7 @@
     "source": {
       "filesMediaTendency": "SSD (Premium v2)",
       "blobTierTendency": "Hot (default), Cool or other as selected by the user",
-      "originalRecommendationText": "Azure Blob Hot (blob-hot), or Cool/other as selected then Azure Files Premium SSD if Blob is not suitable or eligible for Azure Blob Storage"
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads."
     },
     "preferredCombinedOutcomeId": "blob-hot",
     "preferredBySelectedTargets": {
@@ -477,7 +514,7 @@
     "contextualPreferenceRules": [
       {
         "context": "workload+protocol",
-        "reason": "AI/ML workloads (training, features etc.) with S3—Blob Hot tier provides S3-compatible API and better scale",
+        "reason": "AI/ML workloads (training, features etc.) are Blob-first for scalable object access, large dataset handling, and AI/ML data lake style workflows.",
         "appliesWhen": {
           "workload": "AI/ML workloads (training, features etc.)",
           "protocol": [
@@ -489,7 +526,7 @@
             "serviceName": "blobs",
             "preferredOutcomeId": "blob-hot",
             "priority": 1,
-            "rationale": "Blob provides optimal tier and scale for S3"
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across s3 protocol selections due to object-scale access patterns and dataset-oriented storage."
           }
         ]
       }
@@ -512,9 +549,9 @@
     "source": {
       "filesMediaTendency": "SSD (Premium v2)",
       "blobTierTendency": "Hot (default), Cool or other as selected by the user",
-      "originalRecommendationText": "Azure Files-premium-SSD for all SMB versions;  \nAzure Blob (Hot) if v3 then Azure Files Premium SSD if Blob is not suitable or eligible for Azure Blob Storage"
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads; Azure Files Premium SSD remains secondary when file-protocol compatibility is required."
     },
-    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredCombinedOutcomeId": "blob-hot",
     "preferredBySelectedTargets": {
       "filesOnly": [
         "files-premium-ssd"
@@ -523,8 +560,8 @@
         "blob-hot"
       ],
       "filesAndBlobs": [
-        "files-premium-ssd",
-        "blob-hot"
+        "blob-hot",
+        "files-premium-ssd"
       ]
     },
     "recommendationPolicy": {
@@ -552,7 +589,7 @@
     "contextualPreferenceRules": [
       {
         "context": "workload+protocol",
-        "reason": "AI/ML workloads (training, features etc.) with SMB requires consistent locking and high IOPS—Files is optimized for SMB",
+        "reason": "AI/ML workloads (training, features etc.) prefer Azure Blob Hot for scalable object access, large dataset handling, and AI/ML data lake style workflows; Azure Files remains secondary when protocol/application constraints require a file path.",
         "appliesWhen": {
           "workload": "AI/ML workloads (training, features etc.)",
           "protocol": [
@@ -564,16 +601,16 @@
         },
         "preferenceRanking": [
           {
-            "serviceName": "files",
-            "preferredOutcomeId": "files-premium-ssd",
-            "priority": 1,
-            "rationale": "Files provides optimized performance and protocol support for SMB and NFS"
-          },
-          {
             "serviceName": "blobs",
             "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across smb_v2, smb_v3, nfs_v3, nfs_v41 protocol selections due to object-scale access patterns and dataset-oriented storage."
+          },
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
             "priority": 2,
-            "rationale": "Alternative if primary service is not viable"
+            "rationale": "Azure Files Premium SSD remains a secondary option when smb_v2, smb_v3, nfs_v3, nfs_v41 workflows need SMB/NFS-compatible file semantics or application constraints require a file path."
           }
         ]
       }
@@ -595,9 +632,9 @@
     "source": {
       "filesMediaTendency": "SSD (Premium v2)",
       "blobTierTendency": "Hot (default), Cool or other as selected by the user",
-      "originalRecommendationText": "Azure Files Premium SSD for all SMB versions;\nAzBlob Hot (or Cool/other as selected) for S3 and then  Files premium SSD if Blob is not suitable or eligible for Azure Blob Storage"
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads; Azure Files Premium SSD remains secondary when file-protocol compatibility is required."
     },
-    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredCombinedOutcomeId": "blob-hot",
     "preferredBySelectedTargets": {
       "filesOnly": [
         "files-premium-ssd"
@@ -606,8 +643,8 @@
         "blob-hot"
       ],
       "filesAndBlobs": [
-        "files-premium-ssd",
-        "blob-hot"
+        "blob-hot",
+        "files-premium-ssd"
       ]
     },
     "recommendationPolicy": {
@@ -635,7 +672,7 @@
     "contextualPreferenceRules": [
       {
         "context": "workload+protocol",
-        "reason": "AI/ML workloads (training, features etc.) with SMB requires consistent locking and high IOPS—Files is optimized for SMB",
+        "reason": "AI/ML workloads (training, features etc.) prefer Azure Blob Hot for scalable object access, large dataset handling, and AI/ML data lake style workflows; Azure Files remains secondary when protocol/application constraints require a file path.",
         "appliesWhen": {
           "workload": "AI/ML workloads (training, features etc.)",
           "protocol": [
@@ -646,16 +683,16 @@
         },
         "preferenceRanking": [
           {
-            "serviceName": "files",
-            "preferredOutcomeId": "files-premium-ssd",
-            "priority": 1,
-            "rationale": "Files provides optimized performance and protocol support for SMB and S3"
-          },
-          {
             "serviceName": "blobs",
             "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across smb_v2, smb_v3, s3 protocol selections due to object-scale access patterns and dataset-oriented storage."
+          },
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
             "priority": 2,
-            "rationale": "Alternative if primary service is not viable"
+            "rationale": "Azure Files Premium SSD remains a secondary option when smb_v2, smb_v3, s3 workflows need SMB/NFS-compatible file semantics or application constraints require a file path."
           }
         ]
       }
@@ -677,9 +714,9 @@
     "source": {
       "filesMediaTendency": "SSD (Premium v2)",
       "blobTierTendency": "Hot (default), Cool or other as selected by the user",
-      "originalRecommendationText": "AzBlob Hot (or Cool/other as selected) with NFS v3 then AzFiles SSD; \nAzure Blob Hot (blob-hot), or Cool/other as selected"
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads; Azure Files Premium SSD remains secondary when file-protocol compatibility is required."
     },
-    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredCombinedOutcomeId": "blob-hot",
     "preferredBySelectedTargets": {
       "filesOnly": [
         "files-premium-ssd"
@@ -688,8 +725,8 @@
         "blob-hot"
       ],
       "filesAndBlobs": [
-        "files-premium-ssd",
-        "blob-hot"
+        "blob-hot",
+        "files-premium-ssd"
       ]
     },
     "recommendationPolicy": {
@@ -717,7 +754,7 @@
     "contextualPreferenceRules": [
       {
         "context": "workload+protocol",
-        "reason": "AI/ML workloads (training, features etc.) with NFS 4.1—Files Premium SSD provides optimized performance",
+        "reason": "AI/ML workloads (training, features etc.) prefer Azure Blob Hot for scalable object access, large dataset handling, and AI/ML data lake style workflows; Azure Files remains secondary when protocol/application constraints require a file path.",
         "appliesWhen": {
           "workload": "AI/ML workloads (training, features etc.)",
           "protocol": [
@@ -728,16 +765,16 @@
         },
         "preferenceRanking": [
           {
-            "serviceName": "files",
-            "preferredOutcomeId": "files-premium-ssd",
-            "priority": 1,
-            "rationale": "Files provides optimized performance and protocol support for NFS and S3"
-          },
-          {
             "serviceName": "blobs",
             "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across nfs_v3, nfs_v41, s3 protocol selections due to object-scale access patterns and dataset-oriented storage."
+          },
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
             "priority": 2,
-            "rationale": "Alternative if primary service is not viable"
+            "rationale": "Azure Files Premium SSD remains a secondary option when nfs_v3, nfs_v41, s3 workflows need SMB/NFS-compatible file semantics or application constraints require a file path."
           }
         ]
       }
@@ -761,9 +798,9 @@
     "source": {
       "filesMediaTendency": "SSD (Premium v2)",
       "blobTierTendency": "Hot (default), Cool or other as selected by the user",
-      "originalRecommendationText": "Azure Files Premium SSD for all SMB version;\nAzBlob Hot (or Cool/other as selected) for NFS v3, S3 and then Azure Files Premium SSD;\nAzure Blob Hot (blob-hot), or Cool/other as selected;"
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads; Azure Files Premium SSD remains secondary when file-protocol compatibility is required."
     },
-    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredCombinedOutcomeId": "blob-hot",
     "preferredBySelectedTargets": {
       "filesOnly": [
         "files-premium-ssd"
@@ -772,8 +809,8 @@
         "blob-hot"
       ],
       "filesAndBlobs": [
-        "files-premium-ssd",
-        "blob-hot"
+        "blob-hot",
+        "files-premium-ssd"
       ]
     },
     "recommendationPolicy": {
@@ -801,7 +838,7 @@
     "contextualPreferenceRules": [
       {
         "context": "workload+protocol",
-        "reason": "AI/ML workloads (training, features etc.) with SMB requires consistent locking and high IOPS—Files is optimized for SMB",
+        "reason": "AI/ML workloads (training, features etc.) prefer Azure Blob Hot for scalable object access, large dataset handling, and AI/ML data lake style workflows; Azure Files remains secondary when protocol/application constraints require a file path.",
         "appliesWhen": {
           "workload": "AI/ML workloads (training, features etc.)",
           "protocol": [
@@ -814,16 +851,16 @@
         },
         "preferenceRanking": [
           {
-            "serviceName": "files",
-            "preferredOutcomeId": "files-premium-ssd",
-            "priority": 1,
-            "rationale": "Files provides optimized performance and protocol support for SMB, NFS and S3"
-          },
-          {
             "serviceName": "blobs",
             "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across smb_v2, smb_v3, nfs_v3, nfs_v41, s3 protocol selections due to object-scale access patterns and dataset-oriented storage."
+          },
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
             "priority": 2,
-            "rationale": "Alternative if primary service is not viable"
+            "rationale": "Azure Files Premium SSD remains a secondary option when smb_v2, smb_v3, nfs_v3, nfs_v41, s3 workflows need SMB/NFS-compatible file semantics or application constraints require a file path."
           }
         ]
       }
@@ -4974,6 +5011,1872 @@
             "preferredOutcomeId": "blob-hot",
             "priority": 2,
             "rationale": "Alternative if primary service is not viable"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-067",
+    "workloadType": "AI/ML workloads (training, features etc.)",
+    "sourceProtocolLabel": "NFS 3 and S3",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+s3",
+    "preferredFilesOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)—requires protocol adaptation to SMB or NFS v4.1",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads."
+    },
+    "preferredCombinedOutcomeId": "blob-hot",
+    "preferredBySelectedTargets": {
+      "filesOnly": [],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "AI/ML workloads (training, features etc.) are Blob-first for scalable object access, large dataset handling, and AI/ML data lake style workflows.",
+        "appliesWhen": {
+          "workload": "AI/ML workloads (training, features etc.)",
+          "protocol": [
+            "nfs_v3",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across nfs_v3, s3 protocol selections due to object-scale access patterns and dataset-oriented storage."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-068",
+    "workloadType": "Enterprise, mission-critical",
+    "sourceProtocolLabel": "NFS 3 and S3",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+s3",
+    "preferredFilesOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)—requires protocol adaptation to SMB or NFS v4.1",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Blob Hot—NFS v3 and S3 are both Blob-native protocols; Azure Files requires protocol adaptation"
+    },
+    "preferredCombinedOutcomeId": "blob-hot",
+    "preferredBySelectedTargets": {
+      "filesOnly": [],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Enterprise mission-critical workloads with NFS v3 and S3—both are Blob-native protocols; Blob Hot provides high availability and performance",
+        "appliesWhen": {
+          "workload": "Enterprise, mission-critical",
+          "protocol": [
+            "nfs_v3",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "NFS v3 and S3 are both natively Blob-compatible protocols; Blob Hot provides best fit for enterprise mission-critical workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-069",
+    "workloadType": "Databases and stateful app components",
+    "sourceProtocolLabel": "NFS 3 and S3",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+s3",
+    "preferredFilesOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)—requires protocol adaptation to SMB or NFS v4.1",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Blob Hot—NFS v3 and S3 are both Blob-native protocols; Azure Files requires protocol adaptation"
+    },
+    "preferredCombinedOutcomeId": "blob-hot",
+    "preferredBySelectedTargets": {
+      "filesOnly": [],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Database workloads with NFS v3 and S3—both protocols map to Blob; Blob Hot tier for active database files and object data",
+        "appliesWhen": {
+          "workload": "Databases and stateful app components",
+          "protocol": [
+            "nfs_v3",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "NFS v3 and S3 are both natively Blob-compatible protocols; Blob Hot provides best fit for database workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-070",
+    "workloadType": "General-purpose file shares",
+    "sourceProtocolLabel": "NFS 3 and S3",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+s3",
+    "preferredFilesOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks—requires protocol adaptation to SMB or NFS v4.1",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Blob Hot—NFS v3 and S3 are both Blob-native protocols; Azure Files requires protocol adaptation"
+    },
+    "preferredCombinedOutcomeId": "blob-hot",
+    "preferredBySelectedTargets": {
+      "filesOnly": [],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "General-purpose workloads with NFS v3 and S3—Blob Hot tier provides S3-compatible API and better scale for both protocols",
+        "appliesWhen": {
+          "workload": "General-purpose file shares",
+          "protocol": [
+            "nfs_v3",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "NFS v3 and S3 are both natively Blob-compatible protocols; Blob Hot provides best fit for general-purpose workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-071",
+    "workloadType": "Infrequently used (archive, backup)",
+    "sourceProtocolLabel": "NFS 3 and S3",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+s3",
+    "preferredFilesOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-archive",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks—requires protocol adaptation to SMB or NFS v4.1",
+      "blobTierTendency": "Archive (default), or as selected by the user",
+      "originalRecommendationText": "Azure Blob Archive—NFS v3 and S3 are both Blob-native protocols; Azure Files requires protocol adaptation"
+    },
+    "preferredCombinedOutcomeId": "blob-archive",
+    "preferredBySelectedTargets": {
+      "filesOnly": [],
+      "blobsOnly": [
+        "blob-archive"
+      ],
+      "filesAndBlobs": [
+        "blob-archive"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Infrequently used workloads with NFS v3 and S3—both protocols are Blob-compatible; Blob Archive provides the most cost-effective tier",
+        "appliesWhen": {
+          "workload": "Infrequently used (archive, backup)",
+          "protocol": [
+            "nfs_v3",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-archive",
+            "priority": 1,
+            "rationale": "NFS v3 and S3 are both natively Blob-compatible protocols; Blob Archive provides best fit for infrequently used workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-072",
+    "workloadType": "Mixed workloads (various workloads combinations)",
+    "sourceProtocolLabel": "NFS 3 and S3",
+    "sourceProtocolValues": [
+      "nfs_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v3+s3",
+    "preferredFilesOutcomeId": null,
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)—requires protocol adaptation to SMB or NFS v4.1",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Blob Hot—NFS v3 and S3 are both Blob-native protocols; Azure Files requires protocol adaptation"
+    },
+    "preferredCombinedOutcomeId": "blob-hot",
+    "preferredBySelectedTargets": {
+      "filesOnly": [],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Mixed workloads with NFS v3 and S3—Blob Hot tier natively supports both NFS v3 and S3 protocols for diverse storage needs",
+        "appliesWhen": {
+          "workload": "Mixed workloads (various workloads combinations)",
+          "protocol": [
+            "nfs_v3",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "NFS v3 and S3 are both natively Blob-compatible protocols; Blob Hot provides best fit for mixed workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-073",
+    "workloadType": "AI/ML workloads (training, features etc.)",
+    "sourceProtocolLabel": "NFS 4.1 and S3",
+    "sourceProtocolValues": [
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v41+s3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads; Azure Files Premium SSD remains secondary when file-protocol compatibility is required."
+    },
+    "preferredCombinedOutcomeId": "blob-hot",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-premium-ssd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "blob-hot",
+        "files-premium-ssd"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "AI/ML workloads (training, features etc.) prefer Azure Blob Hot for scalable object access, large dataset handling, and AI/ML data lake style workflows; Azure Files remains secondary when protocol/application constraints require a file path.",
+        "appliesWhen": {
+          "workload": "AI/ML workloads (training, features etc.)",
+          "protocol": [
+            "nfs_v41",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across nfs_v41, s3 protocol selections due to object-scale access patterns and dataset-oriented storage."
+          },
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
+            "priority": 2,
+            "rationale": "Azure Files Premium SSD remains a secondary option when nfs_v41, s3 workflows need SMB/NFS-compatible file semantics or application constraints require a file path."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-074",
+    "workloadType": "Enterprise, mission-critical",
+    "sourceProtocolLabel": "NFS 4.1 and S3",
+    "sourceProtocolValues": [
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v41+s3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Files Premium SSD (Pv2) for NFS v4.1; Azure Blob Hot for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-premium-ssd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "files-premium-ssd",
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Enterprise mission-critical workloads with NFS v4.1 and S3—Files Premium SSD for NFS v4.1 path; Blob Hot for S3 object access",
+        "appliesWhen": {
+          "workload": "Enterprise, mission-critical",
+          "protocol": [
+            "nfs_v41",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
+            "priority": 1,
+            "rationale": "Files Premium SSD (Pv2) provides optimized performance for NFS v4.1 protocol"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 2,
+            "rationale": "Blob Hot provides S3-compatible API and scale for enterprise mission-critical workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-075",
+    "workloadType": "Databases and stateful app components",
+    "sourceProtocolLabel": "NFS 4.1 and S3",
+    "sourceProtocolValues": [
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v41+s3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Files Premium SSD (Pv2) for NFS v4.1; Azure Blob Hot for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-premium-ssd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "files-premium-ssd",
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Database workloads with NFS v4.1 and S3—Files Premium SSD for high-performance NFS v4.1 database files; Blob Hot for S3-compatible data",
+        "appliesWhen": {
+          "workload": "Databases and stateful app components",
+          "protocol": [
+            "nfs_v41",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
+            "priority": 1,
+            "rationale": "Files Premium SSD (Pv2) provides optimized performance for NFS v4.1 protocol"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 2,
+            "rationale": "Blob Hot provides S3-compatible API and scale for database workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-076",
+    "workloadType": "General-purpose file shares",
+    "sourceProtocolLabel": "NFS 4.1 and S3",
+    "sourceProtocolValues": [
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v41+s3",
+    "preferredFilesOutcomeId": "files-standard-hdd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Files Standard HDD (Pv2) for NFS v4.1; Azure Blob Hot for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-standard-hdd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-standard-hdd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "files-standard-hdd",
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "General-purpose workloads with NFS v4.1 and S3—Files Standard HDD as cost-effective option for NFS v4.1 shares; Blob Hot for S3 objects",
+        "appliesWhen": {
+          "workload": "General-purpose file shares",
+          "protocol": [
+            "nfs_v41",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-standard-hdd",
+            "priority": 1,
+            "rationale": "Files Standard HDD (Pv2) provides optimized performance for NFS v4.1 protocol"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 2,
+            "rationale": "Blob Hot provides S3-compatible API and scale for general-purpose workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-077",
+    "workloadType": "Infrequently used (archive, backup)",
+    "sourceProtocolLabel": "NFS 4.1 and S3",
+    "sourceProtocolValues": [
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v41+s3",
+    "preferredFilesOutcomeId": "files-standard-hdd",
+    "preferredBlobOutcomeId": "blob-archive",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Archive (default), or as selected by the user",
+      "originalRecommendationText": "Files Standard HDD (Pv2) for NFS v4.1; Azure Blob Archive for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-standard-hdd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-standard-hdd"
+      ],
+      "blobsOnly": [
+        "blob-archive"
+      ],
+      "filesAndBlobs": [
+        "files-standard-hdd",
+        "blob-archive"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Infrequently used workloads with NFS v4.1 and S3—Files Premium SSD for NFS v4.1 access; Blob Archive for cost-effective S3 cold storage",
+        "appliesWhen": {
+          "workload": "Infrequently used (archive, backup)",
+          "protocol": [
+            "nfs_v41",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-standard-hdd",
+            "priority": 1,
+            "rationale": "Files Standard HDD (Pv2) provides optimized performance for NFS v4.1 protocol"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-archive",
+            "priority": 2,
+            "rationale": "Blob Archive provides S3-compatible API and scale for infrequently used workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-078",
+    "workloadType": "Mixed workloads (various workloads combinations)",
+    "sourceProtocolLabel": "NFS 4.1 and S3",
+    "sourceProtocolValues": [
+      "nfs_v41",
+      "s3"
+    ],
+    "sourceProtocolKey": "nfs_v41+s3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Files Premium SSD (Pv2) for NFS v4.1; Azure Blob Hot for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-premium-ssd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "files-premium-ssd",
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Mixed workloads with NFS v4.1 and S3—Files Premium SSD for NFS v4.1 portion; Blob Hot for S3 protocol portion",
+        "appliesWhen": {
+          "workload": "Mixed workloads (various workloads combinations)",
+          "protocol": [
+            "nfs_v41",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
+            "priority": 1,
+            "rationale": "Files Premium SSD (Pv2) provides optimized performance for NFS v4.1 protocol"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 2,
+            "rationale": "Blob Hot provides S3-compatible API and scale for mixed workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-079",
+    "workloadType": "AI/ML workloads (training, features etc.)",
+    "sourceProtocolLabel": "SMB 3.x and S3",
+    "sourceProtocolValues": [
+      "smb_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads; Azure Files Premium SSD remains secondary when file-protocol compatibility is required."
+    },
+    "preferredCombinedOutcomeId": "blob-hot",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-premium-ssd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "blob-hot",
+        "files-premium-ssd"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "AI/ML workloads (training, features etc.) prefer Azure Blob Hot for scalable object access, large dataset handling, and AI/ML data lake style workflows; Azure Files remains secondary when protocol/application constraints require a file path.",
+        "appliesWhen": {
+          "workload": "AI/ML workloads (training, features etc.)",
+          "protocol": [
+            "smb_v3",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across smb_v3, s3 protocol selections due to object-scale access patterns and dataset-oriented storage."
+          },
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
+            "priority": 2,
+            "rationale": "Azure Files Premium SSD remains a secondary option when smb_v3, s3 workflows need SMB/NFS-compatible file semantics or application constraints require a file path."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-080",
+    "workloadType": "Enterprise, mission-critical",
+    "sourceProtocolLabel": "SMB 3.x and S3",
+    "sourceProtocolValues": [
+      "smb_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Files Premium SSD (Pv2) for SMB v3.x; Azure Blob Hot for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-premium-ssd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "files-premium-ssd",
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Enterprise mission-critical workloads with SMB v3.x and S3—Files Premium SSD for SMB path; Blob Hot for S3 object storage",
+        "appliesWhen": {
+          "workload": "Enterprise, mission-critical",
+          "protocol": [
+            "smb_v3",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
+            "priority": 1,
+            "rationale": "Files Premium SSD (Pv2) provides optimized performance and consistent locking for SMB v3.x"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 2,
+            "rationale": "Blob Hot provides S3-compatible API and scale for enterprise mission-critical workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-081",
+    "workloadType": "Databases and stateful app components",
+    "sourceProtocolLabel": "SMB 3.x and S3",
+    "sourceProtocolValues": [
+      "smb_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Files Premium SSD (Pv2) for SMB v3.x; Azure Blob Hot for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-premium-ssd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "files-premium-ssd",
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Database workloads with SMB v3.x and S3—Files Premium SSD for IOPS-intensive SMB database access; Blob Hot for S3 data",
+        "appliesWhen": {
+          "workload": "Databases and stateful app components",
+          "protocol": [
+            "smb_v3",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
+            "priority": 1,
+            "rationale": "Files Premium SSD (Pv2) provides optimized performance and consistent locking for SMB v3.x"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 2,
+            "rationale": "Blob Hot provides S3-compatible API and scale for database workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-082",
+    "workloadType": "General-purpose file shares",
+    "sourceProtocolLabel": "SMB 3.x and S3",
+    "sourceProtocolValues": [
+      "smb_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v3",
+    "preferredFilesOutcomeId": "files-standard-hdd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Files Standard HDD (Pv2) for SMB v3.x; Azure Blob Hot for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-standard-hdd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-standard-hdd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "files-standard-hdd",
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "General-purpose workloads with SMB v3.x and S3—Files Standard HDD for cost-effective SMB shares; Blob Hot for S3 objects",
+        "appliesWhen": {
+          "workload": "General-purpose file shares",
+          "protocol": [
+            "smb_v3",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-standard-hdd",
+            "priority": 1,
+            "rationale": "Files Standard HDD (Pv2) provides optimized performance and consistent locking for SMB v3.x"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 2,
+            "rationale": "Blob Hot provides S3-compatible API and scale for general-purpose workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-083",
+    "workloadType": "Infrequently used (archive, backup)",
+    "sourceProtocolLabel": "SMB 3.x and S3",
+    "sourceProtocolValues": [
+      "smb_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v3",
+    "preferredFilesOutcomeId": "files-standard-hdd",
+    "preferredBlobOutcomeId": "blob-archive",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Archive (default), or as selected by the user",
+      "originalRecommendationText": "Files Standard HDD (Pv2) for SMB v3.x; Azure Blob Archive for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-standard-hdd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-standard-hdd"
+      ],
+      "blobsOnly": [
+        "blob-archive"
+      ],
+      "filesAndBlobs": [
+        "files-standard-hdd",
+        "blob-archive"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Infrequently used workloads with SMB v3.x and S3—Files Standard HDD for archive SMB shares; Blob Archive for S3 cold data",
+        "appliesWhen": {
+          "workload": "Infrequently used (archive, backup)",
+          "protocol": [
+            "smb_v3",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-standard-hdd",
+            "priority": 1,
+            "rationale": "Files Standard HDD (Pv2) provides optimized performance and consistent locking for SMB v3.x"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-archive",
+            "priority": 2,
+            "rationale": "Blob Archive provides S3-compatible API and scale for infrequently used workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-084",
+    "workloadType": "Mixed workloads (various workloads combinations)",
+    "sourceProtocolLabel": "SMB 3.x and S3",
+    "sourceProtocolValues": [
+      "smb_v3",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v3",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Files Premium SSD (Pv2) for SMB v3.x; Azure Blob Hot for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-premium-ssd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "files-premium-ssd",
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Mixed workloads with SMB v3.x and S3—Files Premium SSD for SMB protocol path; Blob Hot for S3 protocol path",
+        "appliesWhen": {
+          "workload": "Mixed workloads (various workloads combinations)",
+          "protocol": [
+            "smb_v3",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
+            "priority": 1,
+            "rationale": "Files Premium SSD (Pv2) provides optimized performance and consistent locking for SMB v3.x"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 2,
+            "rationale": "Blob Hot provides S3-compatible API and scale for mixed workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-085",
+    "workloadType": "AI/ML workloads (training, features etc.)",
+    "sourceProtocolLabel": "SMB 2.x and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v2",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Azure Blob Hot preferred for AI/ML workloads; Azure Files Premium SSD remains secondary when file-protocol compatibility is required."
+    },
+    "preferredCombinedOutcomeId": "blob-hot",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-premium-ssd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "blob-hot",
+        "files-premium-ssd"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "AI/ML workloads (training, features etc.) prefer Azure Blob Hot for scalable object access, large dataset handling, and AI/ML data lake style workflows; Azure Files remains secondary when protocol/application constraints require a file path.",
+        "appliesWhen": {
+          "workload": "AI/ML workloads (training, features etc.)",
+          "protocol": [
+            "smb_v2",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 1,
+            "rationale": "Azure Blob Hot is preferred for AI/ML workflows across smb_v2, s3 protocol selections due to object-scale access patterns and dataset-oriented storage."
+          },
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
+            "priority": 2,
+            "rationale": "Azure Files Premium SSD remains a secondary option when smb_v2, s3 workflows need SMB/NFS-compatible file semantics or application constraints require a file path."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-086",
+    "workloadType": "Enterprise, mission-critical",
+    "sourceProtocolLabel": "SMB 2.x and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v2",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Files Premium SSD (Pv2) for SMB v2.x; Azure Blob Hot for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-premium-ssd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "files-premium-ssd",
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Enterprise mission-critical workloads with SMB v2.x and S3—Files Premium SSD for SMB path; Blob Hot for S3 object storage",
+        "appliesWhen": {
+          "workload": "Enterprise, mission-critical",
+          "protocol": [
+            "smb_v2",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
+            "priority": 1,
+            "rationale": "Files Premium SSD (Pv2) provides optimized performance for SMB v2.x protocol"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 2,
+            "rationale": "Blob Hot provides S3-compatible API and scale for enterprise mission-critical workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-087",
+    "workloadType": "Databases and stateful app components",
+    "sourceProtocolLabel": "SMB 2.x and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v2",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Files Premium SSD (Pv2) for SMB v2.x; Azure Blob Hot for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-premium-ssd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "files-premium-ssd",
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Database workloads with SMB v2.x and S3—Files Premium SSD for SMB-based database access; Blob Hot for S3 data",
+        "appliesWhen": {
+          "workload": "Databases and stateful app components",
+          "protocol": [
+            "smb_v2",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
+            "priority": 1,
+            "rationale": "Files Premium SSD (Pv2) provides optimized performance for SMB v2.x protocol"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 2,
+            "rationale": "Blob Hot provides S3-compatible API and scale for database workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-088",
+    "workloadType": "General-purpose file shares",
+    "sourceProtocolLabel": "SMB 2.x and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v2",
+    "preferredFilesOutcomeId": "files-standard-hdd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Files Standard HDD (Pv2) for SMB v2.x; Azure Blob Hot for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-standard-hdd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-standard-hdd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "files-standard-hdd",
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "General-purpose workloads with SMB v2.x and S3—Files Standard HDD for cost-effective SMB v2 shares; Blob Hot for S3 objects",
+        "appliesWhen": {
+          "workload": "General-purpose file shares",
+          "protocol": [
+            "smb_v2",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-standard-hdd",
+            "priority": 1,
+            "rationale": "Files Standard HDD (Pv2) provides optimized performance for SMB v2.x protocol"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 2,
+            "rationale": "Blob Hot provides S3-compatible API and scale for general-purpose workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-089",
+    "workloadType": "Infrequently used (archive, backup)",
+    "sourceProtocolLabel": "SMB 2.x and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v2",
+    "preferredFilesOutcomeId": "files-standard-hdd",
+    "preferredBlobOutcomeId": "blob-archive",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "HDD (Standard v2) by default, SSD if measured bottlenecks",
+      "blobTierTendency": "Archive (default), or as selected by the user",
+      "originalRecommendationText": "Files Standard HDD (Pv2) for SMB v2.x; Azure Blob Archive for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-standard-hdd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-standard-hdd"
+      ],
+      "blobsOnly": [
+        "blob-archive"
+      ],
+      "filesAndBlobs": [
+        "files-standard-hdd",
+        "blob-archive"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Infrequently used workloads with SMB v2.x and S3—Files Standard HDD for archive SMB shares; Blob Archive for S3 cold data",
+        "appliesWhen": {
+          "workload": "Infrequently used (archive, backup)",
+          "protocol": [
+            "smb_v2",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-standard-hdd",
+            "priority": 1,
+            "rationale": "Files Standard HDD (Pv2) provides optimized performance for SMB v2.x protocol"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-archive",
+            "priority": 2,
+            "rationale": "Blob Archive provides S3-compatible API and scale for infrequently used workloads"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pcm-090",
+    "workloadType": "Mixed workloads (various workloads combinations)",
+    "sourceProtocolLabel": "SMB 2.x and S3",
+    "sourceProtocolValues": [
+      "smb_v2",
+      "s3"
+    ],
+    "sourceProtocolKey": "s3+smb_v2",
+    "preferredFilesOutcomeId": "files-premium-ssd",
+    "preferredBlobOutcomeId": "blob-hot",
+    "preferredChoiceRule": "trackB_preferred_choice_v2",
+    "source": {
+      "filesMediaTendency": "SSD (Premium v2)",
+      "blobTierTendency": "Hot (default), Cool or other as selected by the user",
+      "originalRecommendationText": "Files Premium SSD (Pv2) for SMB v2.x; Azure Blob Hot for S3 protocol path"
+    },
+    "preferredCombinedOutcomeId": "files-premium-ssd",
+    "preferredBySelectedTargets": {
+      "filesOnly": [
+        "files-premium-ssd"
+      ],
+      "blobsOnly": [
+        "blob-hot"
+      ],
+      "filesAndBlobs": [
+        "files-premium-ssd",
+        "blob-hot"
+      ]
+    },
+    "recommendationPolicy": {
+      "singleRecommendedAcrossSelectedServices": true,
+      "pickRule": "first_viable_in_preference_order",
+      "servicePrecedence": [
+        "files",
+        "blobs"
+      ],
+      "viabilityChecks": [
+        "region",
+        "redundancy",
+        "performance",
+        "scale",
+        "size",
+        "readiness",
+        "suitability"
+      ],
+      "fallbackBehavior": "use_best_possible_and_report",
+      "reporting": {
+        "trackAppliedRule": true,
+        "includeRejectedCandidates": true
+      }
+    },
+    "contextualPreferenceRules": [
+      {
+        "context": "workload+protocol",
+        "reason": "Mixed workloads with SMB v2.x and S3—Files Premium SSD for SMB v2 protocol path; Blob Hot for S3 protocol path",
+        "appliesWhen": {
+          "workload": "Mixed workloads (various workloads combinations)",
+          "protocol": [
+            "smb_v2",
+            "s3"
+          ]
+        },
+        "preferenceRanking": [
+          {
+            "serviceName": "files",
+            "preferredOutcomeId": "files-premium-ssd",
+            "priority": 1,
+            "rationale": "Files Premium SSD (Pv2) provides optimized performance for SMB v2.x protocol"
+          },
+          {
+            "serviceName": "blobs",
+            "preferredOutcomeId": "blob-hot",
+            "priority": 2,
+            "rationale": "Blob Hot provides S3-compatible API and scale for mixed workloads"
           }
         ]
       }
